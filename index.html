@@ -6,22 +6,26 @@
 <title>ClassShare</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#f1f5f9;color:#172033;font-family:Arial}
-header{background:#172554;color:white;padding:25px}
-header h1{margin:0}
-main{max-width:950px;margin:25px auto;padding:15px}
-section{background:white;padding:20px;border-radius:14px;margin-bottom:18px;border:2px solid transparent;transition:.15s}
+body{margin:0;background:#f1f5f9;color:#172033;font-family:Arial,sans-serif}
+header{background:#172554;color:white;padding:22px 20px}
+header h1{margin:0;font-size:26px}
+header p{margin:6px 0 0;opacity:.9}
+main{max-width:950px;margin:20px auto;padding:12px}
+section{background:white;padding:18px;border-radius:14px;margin-bottom:16px;border:2px solid transparent;transition:.15s}
 section.dragover-area{border-color:#2563eb;background:#f0f7ff}
-input,textarea,select{width:100%;padding:12px;margin:7px 0;border:1px solid #dce1eb;border-radius:8px;font:inherit}
-button{background:#2563eb;color:white;border:0;padding:11px 15px;border-radius:8px;cursor:pointer;margin:4px}
+input,textarea,select{width:100%;padding:12px;margin:7px 0;border:1px solid #dce1eb;border-radius:8px;font:inherit;font-size:16px}
+button{background:#2563eb;color:white;border:0;padding:11px 15px;border-radius:8px;cursor:pointer;margin:4px 4px 4px 0;font-size:15px}
 button:hover{opacity:.85}
 .danger{background:#dc2626}
 .secondary{background:#64748b}
-.folder{display:inline-block;background:#eff6ff;padding:13px 16px;margin:5px;border-radius:10px;cursor:pointer;border:2px dashed transparent;transition:.15s}
-.folder.active{outline:2px solid #2563eb;background:#dbeafe}
+.folder{display:inline-block;background:#eff6ff;padding:12px 15px;margin:4px;border-radius:10px;cursor:pointer;border:2px dashed transparent;transition:.15s;user-select:none}
+.folder.active{outline:2px solid #2563eb;background:#dbeafe;font-weight:bold}
 .folder.dragover{border-color:#2563eb;background:#93c5fd;transform:scale(1.05)}
-.dropzone{border:2px dashed #93c5fd;background:#f8fafc;padding:25px;text-align:center;border-radius:12px;margin:10px 0;cursor:pointer;color:#475569;transition:.15s}
+.dropzone{border:2px dashed #93c5fd;background:#f8fafc;padding:22px;text-align:center;border-radius:12px;margin:10px 0;cursor:pointer;color:#475569;transition:.15s}
 .dropzone.dragover{border-color:#2563eb;background:#eff6ff;color:#1e40af}
+
+.folder-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:15px 0 10px}
+.folder-bar h3{margin:0}
 
 /* Conteneur adaptatif pour les documents et fichiers */
 #documents{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
@@ -35,21 +39,26 @@ button:hover{opacity:.85}
   max-width:100%;
   word-break:break-word;
 }
-.doc.has-text{
-  width:100%;
-}
-.doc-content{
-  white-space:pre-wrap;
-  margin:8px 0;
-}
-.file-link{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:7px 11px;background:#eff6ff;color:#1d4ed8;text-decoration:none;border-radius:8px;font-weight:bold;font-size:13px}
+.doc.has-text{width:100%}
+.doc-content{white-space:pre-wrap;margin:8px 0}
+.file-link{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:8px 12px;background:#eff6ff;color:#1d4ed8;text-decoration:none;border-radius:8px;font-weight:bold;font-size:14px}
 .file-link:hover{background:#dbeafe}
 .size-tag{font-weight:normal;color:#475569;font-size:12px}
 small{color:#64748b}
-nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:15px}
 .hidden{display:none!important}
-.status{padding:10px;background:#eff6ff;border-radius:8px;margin:10px 0;font-weight:bold}
+.status{padding:10px;background:#eff6ff;border-radius:8px;margin:10px 0;font-weight:bold;font-size:14px}
 .badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:bold;background:#dbeafe;color:#1e40af;margin-left:8px}
+
+/* Adaptation spéciale téléphone */
+@media (max-width: 600px) {
+  main{margin:10px auto;padding:10px}
+  section{padding:14px}
+  nav button{flex:1;text-align:center;padding:12px 8px;margin:0}
+  .doc{width:100%;min-width:0}
+  .file-link{width:100%;justify-content:center}
+  .quick-upload-btn{width:100%}
+}
 </style>
 </head>
 <body>
@@ -84,9 +93,15 @@ nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}
 <section id="library">
 <h2>📚 Bibliothèque</h2>
 <input id="search" placeholder="🔎 Rechercher un document ou un fichier...">
-<p id="dropHint" class="hidden"><small>💡 Astuce : Glisse un fichier <strong>n'importe où dans ce cadre blanc</strong> (pour le mettre dans le dossier ouvert) ou directement sur un dossier précis.</small></p>
+<p id="dropHint" class="hidden"><small>💡 Sur PC : glisse un fichier directement ici. Sur téléphone : utilise le bouton ci-dessous.</small></p>
 <div id="folders"></div>
-<h3 id="folderTitle"></h3>
+
+<div class="folder-bar">
+  <h3 id="folderTitle"></h3>
+  <button id="quickUploadBtn" class="quick-upload-btn hidden">📎 Déposer un fichier ici</button>
+  <input id="quickFileInput" type="file" multiple class="hidden">
+</div>
+
 <div id="documents"></div>
 </section>
 
@@ -96,7 +111,7 @@ nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}
 <input id="title" placeholder="Titre du document (optionnel si tu ajoutes un fichier)">
 <textarea id="content" rows="4" placeholder="Note ou description (optionnel si tu ajoutes un fichier)..."></textarea>
 <div id="dropZone" class="dropzone">
-  📎 Glisse un fichier ici ou <strong>clique pour parcourir</strong>
+  📎 Glisse un fichier ici ou <strong>touche pour choisir</strong>
   <input id="fileInput" type="file" class="hidden">
   <div id="selectedFileName" style="margin-top:8px;font-weight:bold;color:#2563eb"></div>
 </div>
@@ -197,6 +212,13 @@ async function handleDirectDrop(files, folderId) {
   await load();
 }
 
+// Bouton rapide d'envoi (idéal pour téléphone et PC)
+$("quickUploadBtn").onclick = () => $("quickFileInput").click();
+$("quickFileInput").onchange = e => {
+  handleDirectDrop(e.target.files, selected);
+  e.target.value = "";
+};
+
 const libSection = $("library");
 libSection.addEventListener("dragover", e => {
   e.preventDefault();
@@ -254,6 +276,7 @@ function renderAccount() {
   $("navAdd").classList.toggle("hidden", !canPublish());
   $("navManage").classList.toggle("hidden", !staff());
   $("dropHint").classList.toggle("hidden", !canPublish());
+  $("quickUploadBtn").classList.toggle("hidden", !canPublish() || !selected);
 
   if (!canPublish() && !$("add").classList.contains("hidden")) showTab("library");
   if (!staff() && !$("manage").classList.contains("hidden")) showTab("library");
@@ -276,6 +299,8 @@ function render() {
 
   $("folderTitle").textContent =
     folders.find(f => f.id === selected)?.name || "Aucun dossier";
+
+  $("quickUploadBtn").classList.toggle("hidden", !canPublish() || !selected);
 
   $("destination").innerHTML = folders.map(f =>
     `<option value="${f.id}">${safe(f.name)}</option>`
@@ -302,12 +327,12 @@ function render() {
         ${d.file_url ? `<div><a class="file-link" href="${safe(d.file_url)}" target="_blank" rel="noopener">📎 ${safe(d.file_name || "Télécharger")} ${d.file_size ? `<span class="size-tag">(${safe(d.file_size)})</span>` : ""}</a></div>` : ""}
         ${staff() ? `
         <div style="margin-top:8px">
-          <button data-edit="${d.id}" style="padding:6px 10px;font-size:12px">✏️ Modifier</button>
-          <button class="danger" data-delete="${d.id}" style="padding:6px 10px;font-size:12px">🗑️ Supprimer</button>
+          <button data-edit="${d.id}" style="padding:6px 10px;font-size:13px">✏️ Modifier</button>
+          <button class="danger" data-delete="${d.id}" style="padding:6px 10px;font-size:13px">🗑️ Supprimer</button>
         </div>
         ` : ""}
       </div>`;
-    }).join("") : "<p>Aucun document trouvé. Glisse un fichier ici pour commencer !</p>";
+    }).join("") : "<p>Aucun document trouvé dans ce dossier.</p>";
 
   $("management").innerHTML = staff() ? `
     <h3>Créer un dossier</h3>
