@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -81,278 +80,275 @@ nav{display:flex;gap:5px;flex-wrap:wrap}
 import { createClient }
 from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-// REMPLACE CES DEUX VALEURS
-const SUPABASE_URL = "https://twzeosslphrqprfpcxxv.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://twzeosslphrqprfpcxxv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_uknnIKbDO6PvOQxoOHDKIA_3HAWkR6h";
 
-const db = createClient(SUPABASE_URL,SUPABASE_KEY);
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let user=null;
-let profile=null;
-let folders=[];
-let docs=[];
-let selected=null;
+let user = null;
+let profile = null;
+let folders = [];
+let docs = [];
+let selected = null;
 
 const $ = id => document.getElementById(id);
 
-function safe(s){
- return String(s??"").replace(/[&<>"']/g,c=>({
- "&":"&amp;","<":"&lt;",">":"&gt;",
- '"':"&quot;","'":"&#39;"
- })[c]);
+function safe(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;",
+    '"': "&quot;", "'": "&#39;"
+  })[c]);
 }
 
-function say(msg){
- $("message").textContent=msg;
+function say(msg) {
+  $("message").textContent = msg;
 }
 
-function staff(){
- return ["admin","moderator"].includes(profile?.role);
+function staff() {
+  return ["admin", "moderator"].includes(profile?.role);
 }
 
-function canPublish(){
- return !!user && ["admin","moderator","member"].includes(profile?.role);
+function canPublish() {
+  return !!user && ["admin", "moderator", "member"].includes(profile?.role);
 }
 
-async function load(){
- const {data:f,error:fe}=await db.from("folders")
- .select("id,name").order("name");
- if(fe){say("Erreur dossiers : "+fe.message);return;}
- folders=f||[];
+async function load() {
+  const { data: f, error: fe } = await db.from("folders")
+    .select("id,name").order("name");
+  if (fe) { say("Erreur dossiers : " + fe.message); return; }
+  folders = f || [];
 
- const {data:d,error:de}=await db.from("documents")
- .select("id,title,content,author_name,folder_id,created_at")
- .order("created_at",{ascending:false});
- if(de){say("Erreur documents : "+de.message);return;}
- docs=d||[];
+  const { data: d, error: de } = await db.from("documents")
+    .select("id,title,content,author_name,folder_id,created_at")
+    .order("created_at", { ascending: false });
+  if (de) { say("Erreur documents : " + de.message); return; }
+  docs = d || [];
 
- if(!folders.some(f=>f.id===selected))
- selected=folders[0]?.id||null;
+  if (!folders.some(f => f.id === selected))
+    selected = folders[0]?.id || null;
 
- render();
+  render();
 }
 
-async function refreshUser(){
- const {data:{session}}=await db.auth.getSession();
- user=session?.user||null;
- profile=null;
+async function refreshUser() {
+  const { data: { session } } = await db.auth.getSession();
+  user = session?.user || null;
+  profile = null;
 
- if(user){
- const {data,error}=await db.from("profiles")
- .select("display_name,role").eq("id",user.id).single();
- if(error){say("Profil : "+error.message);}
- else profile=data;
- }
- renderAccount();
- await load();
+  if (user) {
+    const { data, error } = await db.from("profiles")
+      .select("display_name,role").eq("id", user.id).single();
+    if (error) { say("Profil : " + error.message); }
+    else profile = data;
+  }
+  renderAccount();
+  await load();
 }
 
-function renderAccount(){
- $("account").classList.toggle("hidden",!!user);
- $("connected").classList.toggle("hidden",!user);
- $("userInfo").textContent=user?
- (profile?.display_name||user.email)+" — "+(profile?.role||"membre"):"";
+function renderAccount() {
+  $("account").classList.toggle("hidden", !!user);
+  $("connected").classList.toggle("hidden", !user);
+  $("userInfo").textContent = user ?
+    (profile?.display_name || user.email) + " — " + (profile?.role || "membre") : "";
 }
 
-function render(){
- $("folders").innerHTML=folders.map(f=>
- `<div class="folder ${f.id===selected?"active":""}"
- data-folder="${f.id}">📁 ${safe(f.name)}</div>`
- ).join("");
+function render() {
+  $("folders").innerHTML = folders.map(f =>
+    `<div class="folder ${f.id === selected ? "active" : ""}"
+    data-folder="${f.id}">📁 ${safe(f.name)}</div>`
+  ).join("");
 
- $("folderTitle").textContent=
- folders.find(f=>f.id===selected)?.name||"Aucun dossier";
+  $("folderTitle").textContent =
+    folders.find(f => f.id === selected)?.name || "Aucun dossier";
 
- $("destination").innerHTML=folders.map(f=>
- `<option value="${f.id}">${safe(f.name)}</option>`
- ).join("");
+  $("destination").innerHTML = folders.map(f =>
+    `<option value="${f.id}">${safe(f.name)}</option>`
+  ).join("");
 
- if(selected)$("destination").value=selected;
+  if (selected) $("destination").value = selected;
 
- const q=$("search").value.toLowerCase();
+  const q = $("search").value.toLowerCase();
 
- const filtered=docs.filter(d=>
- d.folder_id===selected &&
- (d.title+" "+d.content+" "+d.author_name)
- .toLowerCase().includes(q)
- );
+  const filtered = docs.filter(d =>
+    d.folder_id === selected &&
+    (d.title + " " + d.content + " " + d.author_name)
+      .toLowerCase().includes(q)
+  );
 
- $("documents").innerHTML=filtered.length?
- filtered.map(d=>`
- <div class="doc">
- <strong>${safe(d.title)}</strong><br>
- <small>Par ${safe(d.author_name)}</small>
- <p>${safe(d.content)}</p>
- ${staff()?`
- <button data-edit="${d.id}">✏️ Modifier</button>
- <button class="danger" data-delete="${d.id}">🗑️ Supprimer</button>
- `:""}
- </div>`).join(""):"<p>Aucun document trouvé.</p>";
+  $("documents").innerHTML = filtered.length ?
+    filtered.map(d => `
+    <div class="doc">
+    <strong>${safe(d.title)}</strong><br>
+    <small>Par ${safe(d.author_name)}</small>
+    <p>${safe(d.content)}</p>
+    ${staff() ? `
+    <button data-edit="${d.id}">✏️ Modifier</button>
+    <button class="danger" data-delete="${d.id}">🗑️ Supprimer</button>
+    ` : ""}
+    </div>`).join("") : "<p>Aucun document trouvé.</p>";
 
- $("publish").disabled=!canPublish();
- $("add").classList.toggle("hidden",
- $("add").classList.contains("hidden")||!canPublish());
+  $("publish").disabled = !canPublish();
 
- $("management").innerHTML=staff()?`
- <h3>Créer un dossier</h3>
- <input id="newFolder" placeholder="Nom du dossier">
- <button id="createFolder">+ Créer</button>
- <h3>Supprimer un dossier</h3>
- ${folders.map(f=>`
- <p>📁 ${safe(f.name)}
- <button class="danger" data-remove-folder="${f.id}">
- Supprimer
- </button></p>`).join("")}
- <p><small>La suppression d'un dossier supprime également ses documents.</small></p>
- `:"<p>Connecte-toi avec un compte autorisé pour gérer les dossiers.</p>";
+  $("management").innerHTML = staff() ? `
+    <h3>Créer un dossier</h3>
+    <input id="newFolder" placeholder="Nom du dossier">
+    <button id="createFolder">+ Créer</button>
+    <h3>Supprimer un dossier</h3>
+    ${folders.map(f => `
+    <p>📁 ${safe(f.name)}
+    <button class="danger" data-remove-folder="${f.id}">
+    Supprimer
+    </button></p>`).join("")}
+    <p><small>La suppression d'un dossier supprime également ses documents.</small></p>
+    ` : "<p>Connecte-toi avec un compte autorisé pour gérer les dossiers.</p>";
 
- bindActions();
+  bindActions();
 }
 
-function bindActions(){
- document.querySelectorAll("[data-folder]").forEach(el=>{
- el.onclick=()=>{
- selected=el.dataset.folder;
- render();
- };
- });
+function bindActions() {
+  document.querySelectorAll("[data-folder]").forEach(el => {
+    el.onclick = () => {
+      selected = el.dataset.folder;
+      render();
+    };
+  });
 
- document.querySelectorAll("[data-delete]").forEach(el=>{
- el.onclick=()=>deleteDoc(el.dataset.delete);
- });
+  document.querySelectorAll("[data-delete]").forEach(el => {
+    el.onclick = () => deleteDoc(el.dataset.delete);
+  });
 
- document.querySelectorAll("[data-edit]").forEach(el=>{
- el.onclick=()=>editDoc(el.dataset.edit);
- });
+  document.querySelectorAll("[data-edit]").forEach(el => {
+    el.onclick = () => editDoc(el.dataset.edit);
+  });
 
- document.querySelectorAll("[data-remove-folder]").forEach(el=>{
- el.onclick=()=>deleteFolder(el.dataset.removeFolder);
- });
+  document.querySelectorAll("[data-remove-folder]").forEach(el => {
+    el.onclick = () => deleteFolder(el.dataset.removeFolder);
+  });
 
- const create=$("createFolder");
- if(create)create.onclick=addFolder;
+  const create = $("createFolder");
+  if (create) create.onclick = addFolder;
 }
 
-async function addFolder(){
- if(!staff())return;
- const name=$("newFolder").value.trim();
- if(!name)return say("Entre un nom de dossier.");
- const {error}=await db.from("folders").insert({name});
- if(error)return say(error.message);
- say("Dossier créé !");
- await load();
+async function addFolder() {
+  if (!staff()) return;
+  const name = $("newFolder").value.trim();
+  if (!name) return say("Entre un nom de dossier.");
+  const { error } = await db.from("folders").insert({ name });
+  if (error) return say(error.message);
+  say("Dossier créé !");
+  await load();
 }
 
-async function deleteFolder(id){
- if(!staff()||!confirm("Supprimer ce dossier et ses documents ?"))return;
- const {error}=await db.from("folders").delete().eq("id",id);
- if(error)return say(error.message);
- say("Dossier supprimé.");
- await load();
+async function deleteFolder(id) {
+  if (!staff() || !confirm("Supprimer ce dossier et ses documents ?")) return;
+  const { error } = await db.from("folders").delete().eq("id", id);
+  if (error) return say(error.message);
+  say("Dossier supprimé.");
+  await load();
 }
 
-async function addDoc(){
- if(!canPublish())return say("Connexion nécessaire.");
- const title=$("title").value.trim();
- const content=$("content").value.trim();
- const folder_id=$("destination").value;
+async function addDoc() {
+  if (!canPublish()) return say("Connexion nécessaire.");
+  const title = $("title").value.trim();
+  const content = $("content").value.trim();
+  const folder_id = $("destination").value;
 
- if(!title||!content||!folder_id)
- return say("Complète tous les champs.");
+  if (!title || !content || !folder_id)
+    return say("Complète tous les champs.");
 
- const {error}=await db.from("documents").insert({
- title,content,folder_id,
- author_name:profile?.display_name||"Membre"
- });
+  const { error } = await db.from("documents").insert({
+    title, content, folder_id,
+    author_name: profile?.display_name || "Membre"
+  });
 
- if(error)return say(error.message);
+  if (error) return say(error.message);
 
- $("title").value="";
- $("content").value="";
- say("Document publié !");
- await load();
- showTab("library");
+  $("title").value = "";
+  $("content").value = "";
+  say("Document publié !");
+  await load();
+  showTab("library");
 }
 
-async function deleteDoc(id){
- if(!staff()||!confirm("Supprimer ce document ?"))return;
- const {error}=await db.from("documents").delete().eq("id",id);
- if(error)return say(error.message);
- say("Document supprimé.");
- await load();
+async function deleteDoc(id) {
+  if (!staff() || !confirm("Supprimer ce document ?")) return;
+  const { error } = await db.from("documents").delete().eq("id", id);
+  if (error) return say(error.message);
+  say("Document supprimé.");
+  await load();
 }
 
-async function editDoc(id){
- if(!staff())return;
- const d=docs.find(x=>x.id===id);
- if(!d)return;
+async function editDoc(id) {
+  if (!staff()) return;
+  const d = docs.find(x => x.id === id);
+  if (!d) return;
 
- const title=prompt("Nouveau titre :",d.title);
- if(title===null)return;
- const content=prompt("Nouveau contenu :",d.content);
- if(content===null)return;
+  const title = prompt("Nouveau titre :", d.title);
+  if (title === null) return;
+  const content = prompt("Nouveau contenu :", d.content);
+  if (content === null) return;
 
- const {error}=await db.from("documents").update({
- title:title.trim()||d.title,content
- }).eq("id",id);
+  const { error } = await db.from("documents").update({
+    title: title.trim() || d.title, content
+  }).eq("id", id);
 
- if(error)return say(error.message);
- say("Document modifié.");
- await load();
+  if (error) return say(error.message);
+  say("Document modifié.");
+  await load();
 }
 
-async function signup(){
- const email=$("email").value.trim();
- const password=$("password").value;
- const display_name=$("displayName").value.trim()||"Membre";
- if(!email||password.length<8)
- return say("Entre un e-mail et un mot de passe d'au moins 8 caractères.");
+async function signup() {
+  const email = $("email").value.trim();
+  const password = $("password").value;
+  const display_name = $("displayName").value.trim() || "Membre";
+  if (!email || password.length < 8)
+    return say("Entre un e-mail et un mot de passe d'au moins 8 caractères.");
 
- const {data,error}=await db.auth.signUp({
- email,password,
- options:{data:{display_name}}
- });
- if(error)return say(error.message);
- if(!data.session)
- return say("Compte créé ! Vérifie ta boîte e-mail pour confirmer ton inscription.");
- await refreshUser();
- say("Bienvenue sur ClassShare !");
+  const { data, error } = await db.auth.signUp({
+    email, password,
+    options: { data: { display_name } }
+  });
+  if (error) return say(error.message);
+  if (!data.session)
+    return say("Compte créé ! Vérifie ta boîte e-mail pour confirmer ton inscription.");
+  await refreshUser();
+  say("Bienvenue sur ClassShare !");
 }
 
-async function login(){
- const {error}=await db.auth.signInWithPassword({
- email:$("email").value.trim(),
- password:$("password").value
- });
- if(error)return say(error.message);
- await refreshUser();
- say("Connexion réussie !");
+async function login() {
+  const { error } = await db.auth.signInWithPassword({
+    email: $("email").value.trim(),
+    password: $("password").value
+  });
+  if (error) return say(error.message);
+  await refreshUser();
+  say("Connexion réussie !");
 }
 
-async function logout(){
- await db.auth.signOut();
- await refreshUser();
- say("Déconnexion réussie.");
+async function logout() {
+  await db.auth.signOut();
+  await refreshUser();
+  say("Déconnexion réussie.");
 }
 
-function showTab(tab){
- ["library","add","manage"].forEach(id=>{
- $(id).classList.toggle("hidden",id!==tab);
- });
+function showTab(tab) {
+  ["library", "add", "manage"].forEach(id => {
+    $(id).classList.toggle("hidden", id !== tab);
+  });
 }
 
-$("signup").onclick=signup;
-$("login").onclick=login;
-$("logout").onclick=logout;
-$("publish").onclick=addDoc;
-$("search").oninput=render;
+$("signup").onclick = signup;
+$("login").onclick = login;
+$("logout").onclick = logout;
+$("publish").onclick = addDoc;
+$("search").oninput = render;
 
-document.querySelectorAll("[data-tab]").forEach(el=>{
- el.onclick=()=>showTab(el.dataset.tab);
+document.querySelectorAll("[data-tab]").forEach(el => {
+  el.onclick = () => showTab(el.dataset.tab);
 });
 
-db.auth.onAuthStateChange(()=>{
- setTimeout(()=>refreshUser(),0);
+db.auth.onAuthStateChange(() => {
+  setTimeout(() => refreshUser(), 0);
 });
 
 await refreshUser();
