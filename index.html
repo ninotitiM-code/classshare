@@ -5,66 +5,103 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ClassShare</title>
 <style>
+:root{
+  --header-bg:#172554;
+  --accent:#2563eb;
+  --bg:#f1f5f9;
+  --card:#ffffff;
+  --text:#172033;
+  --muted:#64748b;
+  --border:#e2e8f0;
+  --soft:#eff6ff;
+}
+body.dark{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --text:#f1f5f9;
+  --muted:#94a3b8;
+  --border:#334155;
+  --soft:#1e3a8a;
+}
 *{box-sizing:border-box}
-body{margin:0;background:#f1f5f9;color:#172033;font-family:Arial,sans-serif}
-header{background:#172554;color:white;padding:22px 20px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;transition:background .2s,color .2s}
+header{background:var(--header-bg);color:white;padding:22px 20px;transition:background .2s}
 header h1{margin:0;font-size:26px}
 header p{margin:6px 0 0;opacity:.9}
 main{max-width:950px;margin:20px auto;padding:12px}
-section{background:white;padding:18px;border-radius:14px;margin-bottom:16px;border:2px solid transparent;transition:.15s}
-section.dragover-area{border-color:#2563eb;background:#f0f7ff}
-input,textarea,select{width:100%;padding:12px;margin:7px 0;border:1px solid #dce1eb;border-radius:8px;font:inherit;font-size:16px}
-button{background:#2563eb;color:white;border:0;padding:11px 15px;border-radius:8px;cursor:pointer;margin:4px 4px 4px 0;font-size:15px}
+section{background:var(--card);padding:18px;border-radius:14px;margin-bottom:16px;border:2px solid transparent;transition:.15s}
+section.dragover-area{border-color:var(--accent);background:var(--soft)}
+input,textarea,select{width:100%;padding:12px;margin:7px 0;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:8px;font:inherit;font-size:16px}
+button{background:var(--accent);color:white;border:0;padding:11px 15px;border-radius:8px;cursor:pointer;margin:4px 4px 4px 0;font-size:15px}
 button:hover{opacity:.85}
 .danger{background:#dc2626}
 .secondary{background:#64748b}
-.folder{display:inline-block;background:#eff6ff;padding:12px 15px;margin:4px;border-radius:10px;cursor:pointer;border:2px dashed transparent;transition:.15s;user-select:none}
-.folder.active{outline:2px solid #2563eb;background:#dbeafe;font-weight:bold}
-.folder.dragover{border-color:#2563eb;background:#93c5fd;transform:scale(1.05)}
-.dropzone{border:2px dashed #93c5fd;background:#f8fafc;padding:22px;text-align:center;border-radius:12px;margin:10px 0;cursor:pointer;color:#475569;transition:.15s}
-.dropzone.dragover{border-color:#2563eb;background:#eff6ff;color:#1e40af}
+.folder{display:inline-block;background:var(--soft);padding:12px 15px;margin:4px;border-radius:10px;cursor:pointer;border:2px dashed transparent;transition:.15s;user-select:none}
+.folder.active{outline:2px solid var(--accent);font-weight:bold}
+.folder.dragover{border-color:var(--accent);transform:scale(1.05)}
+.dropzone{border:2px dashed #93c5fd;background:var(--bg);padding:22px;text-align:center;border-radius:12px;margin:10px 0;cursor:pointer;color:var(--muted);transition:.15s}
+.dropzone.dragover{border-color:var(--accent);background:var(--soft);color:var(--text)}
+
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 12px}
+.toolbar select{width:auto;padding:9px 12px;margin:0;font-size:14px}
+.checkbox-label{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;user-select:none}
+.checkbox-label input{width:auto;margin:0}
 
 .folder-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:15px 0 10px}
 .folder-bar h3{margin:0}
 
-/* Conteneur adaptatif pour les documents et fichiers */
 #documents{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
 .doc{
   padding:12px 16px;
-  border:1px solid #e2e8f0;
+  border:1px solid var(--border);
   border-radius:10px;
-  background:white;
+  background:var(--card);
   width:fit-content;
   min-width:220px;
   max-width:100%;
   word-break:break-word;
 }
 .doc.has-text{width:100%}
+body.compact .doc{padding:8px 12px;min-width:180px;font-size:14px}
 .doc-content{white-space:pre-wrap;margin:8px 0}
-.file-link{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:8px 12px;background:#eff6ff;color:#1d4ed8;text-decoration:none;border-radius:8px;font-weight:bold;font-size:14px}
-.file-link:hover{background:#dbeafe}
-.size-tag{font-weight:normal;color:#475569;font-size:12px}
-small{color:#64748b}
+.file-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.file-link{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;background:var(--soft);color:var(--accent);text-decoration:none;border-radius:8px;font-weight:bold;font-size:13px}
+body.dark .file-link{color:#93c5fd}
+.file-link:hover{opacity:.85}
+.copy-btn{padding:7px 10px;font-size:13px;margin:0;background:var(--border);color:var(--text)}
+.size-tag{font-weight:normal;color:var(--muted);font-size:12px}
+small{color:var(--muted)}
 nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:15px}
 .hidden{display:none!important}
-.status{padding:10px;background:#eff6ff;border-radius:8px;margin:10px 0;font-weight:bold;font-size:14px}
-.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:bold;background:#dbeafe;color:#1e40af;margin-left:8px}
+.status{padding:10px;background:var(--soft);border-radius:8px;margin:10px 0;font-weight:bold;font-size:14px}
+.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:bold;background:var(--soft);color:var(--accent);margin-left:8px}
+body.dark .badge{color:#93c5fd}
 
-/* Adaptation spéciale téléphone */
+.panel-box{border:1px solid var(--border);border-radius:10px;padding:15px;margin-bottom:16px;background:var(--bg)}
+.panel-box h3{margin-top:0}
+.row-item{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.row-item:last-child{border-bottom:none}
+.row-item select{width:auto;padding:7px 10px;margin:0;font-size:14px}
+.color-picker-row{display:flex;align-items:center;gap:12px;margin:8px 0}
+.color-picker-row input[type="color"]{width:60px;height:42px;padding:2px;cursor:pointer}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.stat-card strong{display:block;font-size:22px;color:var(--accent)}
+
 @media (max-width: 600px) {
   main{margin:10px auto;padding:10px}
   section{padding:14px}
-  nav button{flex:1;text-align:center;padding:12px 8px;margin:0}
+  nav button{flex:1;text-align:center;padding:12px 6px;margin:0;font-size:14px}
   .doc{width:100%;min-width:0}
-  .file-link{width:100%;justify-content:center}
+  .file-link{flex:1;justify-content:center}
   .quick-upload-btn{width:100%}
 }
 </style>
 </head>
 <body>
 <header>
-<h1>📚 ClassShare</h1>
-<p>Le partage des connaissances.</p>
+<h1 id="siteTitle">📚 ClassShare</h1>
+<p id="siteSubtitle">Le partage des connaissances.</p>
 </header>
 
 <main>
@@ -87,12 +124,23 @@ nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:15px}
 <nav>
 <button data-tab="library">📁 Dossiers</button>
 <button id="navAdd" data-tab="add" class="hidden">➕ Ajouter</button>
+<button id="navMember" data-tab="memberSpace" class="hidden">👤 Mon espace</button>
 <button id="navManage" data-tab="manage" class="hidden">⚙️ Gestion</button>
 </nav>
 
 <section id="library">
 <h2>📚 Bibliothèque</h2>
 <input id="search" placeholder="🔎 Rechercher un document ou un fichier...">
+<div class="toolbar">
+  <select id="sortOrder">
+    <option value="newest">🕒 Plus récents</option>
+    <option value="oldest">📅 Plus anciens</option>
+    <option value="alpha">🔤 Ordre alphabétique</option>
+  </select>
+  <label id="onlyMineLabel" class="checkbox-label hidden">
+    <input type="checkbox" id="onlyMine"> Uniquement mes partages
+  </label>
+</div>
 <p id="dropHint" class="hidden"><small>💡 Sur PC : glisse un fichier directement ici. Sur téléphone : utilise le bouton ci-dessous.</small></p>
 <div id="folders"></div>
 
@@ -113,13 +161,18 @@ nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:15px}
 <div id="dropZone" class="dropzone">
   📎 Glisse un fichier ici ou <strong>touche pour choisir</strong>
   <input id="fileInput" type="file" class="hidden">
-  <div id="selectedFileName" style="margin-top:8px;font-weight:bold;color:#2563eb"></div>
+  <div id="selectedFileName" style="margin-top:8px;font-weight:bold;color:var(--accent)"></div>
 </div>
 <button id="publish">Publier immédiatement</button>
 </section>
 
+<section id="memberSpace" class="hidden">
+<h2>👤 Mon espace membre</h2>
+<div id="memberContent"></div>
+</section>
+
 <section id="manage" class="hidden">
-<h2>⚙️ Gestion des dossiers</h2>
+<h2>⚙️ Panneau de gestion</h2>
 <div id="management"></div>
 </section>
 </main>
@@ -138,10 +191,25 @@ let user = null;
 let profile = null;
 let folders = [];
 let docs = [];
+let allProfiles = [];
+let settings = {
+  site_title: "📚 ClassShare",
+  site_subtitle: "Le partage des connaissances.",
+  theme_color: "#172554"
+};
 let selected = null;
 let pendingFile = null;
 
 const $ = id => document.getElementById(id);
+
+// Appliquer les préférences visuelles personnelles du membre (stockées sur son appareil)
+function applyPersonalPrefs() {
+  const isDark = localStorage.getItem("cs_dark") === "1";
+  const isCompact = localStorage.getItem("cs_compact") === "1";
+  document.body.classList.toggle("dark", isDark);
+  document.body.classList.toggle("compact", isCompact);
+}
+applyPersonalPrefs();
 
 window.addEventListener("dragover", e => e.preventDefault());
 window.addEventListener("drop", e => e.preventDefault());
@@ -164,12 +232,35 @@ function say(msg) {
   $("message").textContent = msg;
 }
 
+function isAdmin() {
+  return profile?.role === "admin";
+}
+
 function staff() {
   return ["admin", "moderator"].includes(profile?.role);
 }
 
 function canPublish() {
   return !!user && ["admin", "moderator", "member"].includes(profile?.role);
+}
+
+function canManageDoc(doc) {
+  return staff() || (!!user && doc.author_id === user.id);
+}
+
+function applyTheme() {
+  $("siteTitle").textContent = settings.site_title || "📚 ClassShare";
+  $("siteSubtitle").textContent = settings.site_subtitle || "Le partage des connaissances.";
+  document.title = (settings.site_title || "ClassShare").replace(/^[^\w\s]+\s*/, "");
+  document.documentElement.style.setProperty("--header-bg", settings.theme_color || "#172554");
+}
+
+async function loadSettings() {
+  const { data } = await db.from("settings").select("*").eq("id", 1).maybeSingle();
+  if (data) {
+    settings = data;
+    applyTheme();
+  }
 }
 
 async function uploadFile(file) {
@@ -199,6 +290,7 @@ async function handleDirectDrop(files, folderId) {
         file_url: uploaded.url,
         file_name: uploaded.name,
         file_size: uploaded.size,
+        author_id: user.id,
         author_name: profile?.display_name || "Membre"
       });
       if (error) throw error;
@@ -212,7 +304,6 @@ async function handleDirectDrop(files, folderId) {
   await load();
 }
 
-// Bouton rapide d'envoi (idéal pour téléphone et PC)
 $("quickUploadBtn").onclick = () => $("quickFileInput").click();
 $("quickFileInput").onchange = e => {
   handleDirectDrop(e.target.files, selected);
@@ -238,16 +329,25 @@ libSection.addEventListener("drop", e => {
 });
 
 async function load() {
+  await loadSettings();
+
   const { data: f, error: fe } = await db.from("folders")
     .select("id,name").order("name");
   if (fe) { say("Erreur dossiers : " + fe.message); return; }
   folders = f || [];
 
   const { data: d, error: de } = await db.from("documents")
-    .select("id,title,content,author_name,folder_id,file_url,file_name,file_size,created_at")
+    .select("id,title,content,author_id,author_name,folder_id,file_url,file_name,file_size,created_at")
     .order("created_at", { ascending: false });
   if (de) { say("Erreur documents : " + de.message); return; }
   docs = d || [];
+
+  if (staff()) {
+    const { data: p } = await db.from("profiles").select("id,display_name,role").order("display_name");
+    allProfiles = p || [];
+  } else {
+    allProfiles = [];
+  }
 
   if (!folders.some(f => f.id === selected))
     selected = folders[0]?.id || null;
@@ -274,11 +374,14 @@ function renderAccount() {
   $("account").classList.toggle("hidden", !!user);
   $("connected").classList.toggle("hidden", !user);
   $("navAdd").classList.toggle("hidden", !canPublish());
+  $("navMember").classList.toggle("hidden", !user);
   $("navManage").classList.toggle("hidden", !staff());
   $("dropHint").classList.toggle("hidden", !canPublish());
+  $("onlyMineLabel").classList.toggle("hidden", !user);
   $("quickUploadBtn").classList.toggle("hidden", !canPublish() || !selected);
 
   if (!canPublish() && !$("add").classList.contains("hidden")) showTab("library");
+  if (!user && !$("memberSpace").classList.contains("hidden")) showTab("library");
   if (!staff() && !$("manage").classList.contains("hidden")) showTab("library");
 
   if (user) {
@@ -288,6 +391,7 @@ function renderAccount() {
     $("userInfo").innerHTML = `Connecté en tant que <strong>${safe(profile?.display_name || user.email)}</strong> <span class="badge">${roleLabel}</span>`;
   } else {
     $("userInfo").textContent = "";
+    $("onlyMine").checked = false;
   }
 }
 
@@ -309,23 +413,37 @@ function render() {
   if (selected) $("destination").value = selected;
 
   const q = $("search").value.toLowerCase();
+  const onlyMine = $("onlyMine").checked;
+  const sort = $("sortOrder").value;
 
-  const filtered = docs.filter(d =>
+  let filtered = docs.filter(d =>
     d.folder_id === selected &&
+    (!onlyMine || (user && d.author_id === user.id)) &&
     (d.title + " " + (d.content || "") + " " + (d.file_name || "") + " " + d.author_name)
       .toLowerCase().includes(q)
   );
 
+  if (sort === "oldest") {
+    filtered = [...filtered].reverse();
+  } else if (sort === "alpha") {
+    filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
+  }
+
   $("documents").innerHTML = filtered.length ?
     filtered.map(d => {
       const hasText = !!(d.content && d.content.trim());
+      const editable = canManageDoc(d);
       return `
       <div class="doc ${hasText ? "has-text" : ""}">
         <strong>${safe(d.title)}</strong><br>
         <small>Par ${safe(d.author_name)}</small>
         ${hasText ? `<div class="doc-content">${safe(d.content)}</div>` : ""}
-        ${d.file_url ? `<div><a class="file-link" href="${safe(d.file_url)}" target="_blank" rel="noopener">📎 ${safe(d.file_name || "Télécharger")} ${d.file_size ? `<span class="size-tag">(${safe(d.file_size)})</span>` : ""}</a></div>` : ""}
-        ${staff() ? `
+        ${d.file_url ? `
+          <div class="file-actions">
+            <a class="file-link" href="${safe(d.file_url)}" target="_blank" rel="noopener">📎 ${safe(d.file_name || "Télécharger")} ${d.file_size ? `<span class="size-tag">(${safe(d.file_size)})</span>` : ""}</a>
+            <button class="copy-btn" data-copy="${safe(d.file_url)}" title="Copier le lien">🔗</button>
+          </div>` : ""}
+        ${editable ? `
         <div style="margin-top:8px">
           <button data-edit="${d.id}" style="padding:6px 10px;font-size:13px">✏️ Modifier</button>
           <button class="danger" data-delete="${d.id}" style="padding:6px 10px;font-size:13px">🗑️ Supprimer</button>
@@ -334,18 +452,122 @@ function render() {
       </div>`;
     }).join("") : "<p>Aucun document trouvé dans ce dossier.</p>";
 
-  $("management").innerHTML = staff() ? `
-    <h3>Créer un dossier</h3>
-    <input id="newFolder" placeholder="Nom du dossier">
-    <button id="createFolder">+ Créer</button>
-    <h3>Supprimer un dossier</h3>
-    ${folders.map(f => `
-    <p>📁 ${safe(f.name)}
-    <button class="danger" data-remove-folder="${f.id}">
-    Supprimer
-    </button></p>`).join("")}
-    <p><small>La suppression d'un dossier supprime également ses documents.</small></p>
-    ` : "";
+  // Espace personnel pour TOUS les membres connectés
+  if (user) {
+    const myDocs = docs.filter(d => d.author_id === user.id);
+    const isDark = localStorage.getItem("cs_dark") === "1";
+    const isCompact = localStorage.getItem("cs_compact") === "1";
+
+    $("memberContent").innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><strong>${myDocs.length}</strong><small>Mes partages</small></div>
+        <div class="stat-card"><strong>${folders.length}</strong><small>Dossiers actifs</small></div>
+        <div class="stat-card"><strong>${docs.length}</strong><small>Total ressources</small></div>
+      </div>
+
+      <div class="panel-box">
+        <h3>🪪 Mon profil</h3>
+        <label><small>Mon prénom ou pseudo affiché sur mes publications</small></label>
+        <div style="display:flex;gap:8px">
+          <input id="myNewName" value="${safe(profile?.display_name || "")}" style="margin:0">
+          <button id="saveMyName" style="margin:0;white-space:nowrap">Enregistrer</button>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <h3>🎨 Préférences d'affichage (sur cet appareil)</h3>
+        <div class="row-item">
+          <span>🌙 Mode sombre</span>
+          <label class="checkbox-label"><input type="checkbox" id="toggleDark" ${isDark ? "checked" : ""}> Activer</label>
+        </div>
+        <div class="row-item">
+          <span>📐 Affichage compact des fichiers</span>
+          <label class="checkbox-label"><input type="checkbox" id="toggleCompact" ${isCompact ? "checked" : ""}> Activer</label>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <h3>📂 Mes publications (${myDocs.length})</h3>
+        ${myDocs.length ? myDocs.map(d => {
+          const folderName = folders.find(f => f.id === d.folder_id)?.name || "Dossier";
+          return `
+          <div class="row-item">
+            <div>
+              <strong>${safe(d.title)}</strong><br>
+              <small>Dans 📁 ${safe(folderName)}</small>
+            </div>
+            <div>
+              <button data-edit="${d.id}" style="padding:6px 10px;font-size:13px">✏️</button>
+              <button class="danger" data-delete="${d.id}" style="padding:6px 10px;font-size:13px">🗑️</button>
+            </div>
+          </div>`;
+        }).join("") : "<p><small>Tu n'as encore rien publié. Glisse un fichier dans un dossier pour commencer !</small></p>"}
+      </div>
+    `;
+  } else {
+    $("memberContent").innerHTML = "";
+  }
+
+  // Panneau de gestion Staff / Admin
+  if (staff()) {
+    $("management").innerHTML = `
+      <div class="panel-box">
+        <h3>📁 Dossiers (${folders.length})</h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input id="newFolder" placeholder="Nom du nouveau dossier" style="margin:0">
+          <button id="createFolder" style="margin:0;white-space:nowrap">+ Créer</button>
+        </div>
+        ${folders.map(f => {
+          const count = docs.filter(d => d.folder_id === f.id).length;
+          return `
+          <div class="row-item">
+            <span>📁 <strong>${safe(f.name)}</strong> <small>(${count} ressource${count > 1 ? "s" : ""})</small></span>
+            <div>
+              <button class="secondary" data-rename-folder="${f.id}" style="padding:6px 10px;font-size:13px">✏️ Renommer</button>
+              <button class="danger" data-remove-folder="${f.id}" style="padding:6px 10px;font-size:13px">🗑️ Supprimer</button>
+            </div>
+          </div>`;
+        }).join("")}
+      </div>
+
+      ${isAdmin() ? `
+      <div class="panel-box">
+        <h3>🎨 Apparence globale du site</h3>
+        <label><small>Titre du site</small></label>
+        <input id="cfgTitle" value="${safe(settings.site_title)}">
+        <label><small>Slogan / sous-titre</small></label>
+        <input id="cfgSubtitle" value="${safe(settings.site_subtitle)}">
+        <div class="color-picker-row">
+          <label><small>Couleur du bandeau :</small></label>
+          <input id="cfgColor" type="color" value="${safe(settings.theme_color || "#172554")}">
+        </div>
+        <button id="saveSettings">💾 Enregistrer l'interface</button>
+      </div>
+
+      <div class="panel-box">
+        <h3>👥 Membres et rôles (${allProfiles.length})</h3>
+        ${allProfiles.map(p => `
+          <div class="row-item">
+            <span>👤 <strong>${safe(p.display_name || "Sans nom")}</strong> ${p.id === user.id ? "<small>(Toi)</small>" : ""}</span>
+            <select data-role-user="${p.id}" ${p.id === user.id ? "disabled" : ""}>
+              <option value="member" ${p.role === "member" ? "selected" : ""}>Membre</option>
+              <option value="moderator" ${p.role === "moderator" ? "selected" : ""}>Modérateur</option>
+              <option value="admin" ${p.role === "admin" ? "selected" : ""}>Administrateur</option>
+            </select>
+          </div>
+        `).join("")}
+      </div>
+      ` : ""}
+
+      <div class="panel-box">
+        <h3>📦 Sauvegarde</h3>
+        <p><small>Télécharge une copie complète de tous les dossiers et documents du site.</small></p>
+        <button id="exportData" class="secondary">⬇️ Exporter les données (JSON)</button>
+      </div>
+    `;
+  } else {
+    $("management").innerHTML = "";
+  }
 
   bindActions();
 }
@@ -372,6 +594,13 @@ function bindActions() {
     };
   });
 
+  document.querySelectorAll("[data-copy]").forEach(el => {
+    el.onclick = async () => {
+      await navigator.clipboard.writeText(el.dataset.copy);
+      say("🔗 Lien du fichier copié dans le presse-papiers !");
+    };
+  });
+
   document.querySelectorAll("[data-delete]").forEach(el => {
     el.onclick = () => deleteDoc(el.dataset.delete);
   });
@@ -384,8 +613,95 @@ function bindActions() {
     el.onclick = () => deleteFolder(el.dataset.removeFolder);
   });
 
+  document.querySelectorAll("[data-rename-folder]").forEach(el => {
+    el.onclick = () => renameFolder(el.dataset.renameFolder);
+  });
+
+  document.querySelectorAll("[data-role-user]").forEach(el => {
+    el.onchange = () => changeUserRole(el.dataset.roleUser, el.value);
+  });
+
+  const saveNameBtn = $("saveMyName");
+  if (saveNameBtn) saveNameBtn.onclick = updateMyDisplayName;
+
+  const darkToggle = $("toggleDark");
+  if (darkToggle) darkToggle.onchange = () => {
+    localStorage.setItem("cs_dark", darkToggle.checked ? "1" : "0");
+    applyPersonalPrefs();
+  };
+
+  const compactToggle = $("toggleCompact");
+  if (compactToggle) compactToggle.onchange = () => {
+    localStorage.setItem("cs_compact", compactToggle.checked ? "1" : "0");
+    applyPersonalPrefs();
+  };
+
   const create = $("createFolder");
   if (create) create.onclick = addFolder;
+
+  const saveCfg = $("saveSettings");
+  if (saveCfg) saveCfg.onclick = saveInterfaceSettings;
+
+  const exp = $("exportData");
+  if (exp) exp.onclick = exportBackup;
+}
+
+async function updateMyDisplayName() {
+  if (!user) return;
+  const newName = $("myNewName").value.trim();
+  if (!newName) return say("Entre un pseudo valide.");
+
+  const { error } = await db.from("profiles")
+    .update({ display_name: newName })
+    .eq("id", user.id);
+
+  if (error) return say("Erreur mise à jour pseudo : " + error.message);
+  say("✅ Ton pseudo a été mis à jour !");
+  await refreshUser();
+}
+
+async function saveInterfaceSettings() {
+  if (!isAdmin()) return;
+  const site_title = $("cfgTitle").value.trim() || "📚 ClassShare";
+  const site_subtitle = $("cfgSubtitle").value.trim() || "Le partage des connaissances.";
+  const theme_color = $("cfgColor").value || "#172554";
+
+  const { error } = await db.from("settings").upsert({
+    id: 1, site_title, site_subtitle, theme_color
+  });
+
+  if (error) return say("Erreur sauvegarde interface : " + error.message);
+  settings = { id: 1, site_title, site_subtitle, theme_color };
+  applyTheme();
+  say("✅ Apparence du site mise à jour !");
+}
+
+async function changeUserRole(targetId, newRole) {
+  if (!isAdmin()) return;
+  const { error } = await db.from("profiles")
+    .update({ role: newRole })
+    .eq("id", targetId);
+
+  if (error) {
+    say("Erreur changement de rôle : " + error.message);
+    return await load();
+  }
+  say("✅ Rôle mis à jour !");
+  await load();
+}
+
+function exportBackup() {
+  const backup = {
+    exported_at: new Date().toISOString(),
+    settings,
+    folders,
+    documents: docs
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `classshare-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
 }
 
 const dz = $("dropZone");
@@ -415,8 +731,20 @@ async function addFolder() {
   await load();
 }
 
+async function renameFolder(id) {
+  if (!staff()) return;
+  const current = folders.find(f => f.id === id);
+  if (!current) return;
+  const name = prompt("Nouveau nom du dossier :", current.name);
+  if (!name || !name.trim() || name.trim() === current.name) return;
+  const { error } = await db.from("folders").update({ name: name.trim() }).eq("id", id);
+  if (error) return say(error.message);
+  say("Dossier renommé !");
+  await load();
+}
+
 async function deleteFolder(id) {
-  if (!staff() || !confirm("Supprimer ce dossier et ses documents ?")) return;
+  if (!staff() || !confirm("Supprimer ce dossier et tous ses documents ?")) return;
   const { error } = await db.from("folders").delete().eq("id", id);
   if (error) return say(error.message);
   say("Dossier supprimé.");
@@ -456,6 +784,7 @@ async function addDoc() {
       file_url,
       file_name,
       file_size,
+      author_id: user.id,
       author_name: profile?.display_name || "Membre"
     });
 
@@ -477,7 +806,9 @@ async function addDoc() {
 }
 
 async function deleteDoc(id) {
-  if (!staff() || !confirm("Supprimer ce document ?")) return;
+  const doc = docs.find(x => x.id === id);
+  if (!doc || !canManageDoc(doc)) return;
+  if (!confirm("Supprimer ce document ?")) return;
   const { error } = await db.from("documents").delete().eq("id", id);
   if (error) return say(error.message);
   say("Document supprimé.");
@@ -485,9 +816,8 @@ async function deleteDoc(id) {
 }
 
 async function editDoc(id) {
-  if (!staff()) return;
   const d = docs.find(x => x.id === id);
-  if (!d) return;
+  if (!d || !canManageDoc(d)) return;
 
   const title = prompt("Nouveau titre :", d.title);
   if (title === null) return;
@@ -538,7 +868,7 @@ async function logout() {
 }
 
 function showTab(tab) {
-  ["library", "add", "manage"].forEach(id => {
+  ["library", "add", "memberSpace", "manage"].forEach(id => {
     $(id).classList.toggle("hidden", id !== tab);
   });
 }
@@ -548,6 +878,8 @@ $("login").onclick = login;
 $("logout").onclick = logout;
 $("publish").onclick = addDoc;
 $("search").oninput = render;
+$("sortOrder").onchange = render;
+$("onlyMine").onchange = render;
 
 document.querySelectorAll("[data-tab]").forEach(el => {
   el.onclick = () => showTab(el.dataset.tab);
