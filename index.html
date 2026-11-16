@@ -15,21 +15,6 @@
   --border:#e2e8f0;
   --soft:#eff6ff;
 }
-body.theme-emerald{
-  --header-bg:#064e3b;
-  --accent:#059669;
-  --soft:#ecfdf5;
-}
-body.theme-purple{
-  --header-bg:#3b0764;
-  --accent:#7c3aed;
-  --soft:#f5f3ff;
-}
-body.theme-coral{
-  --header-bg:#7c2d12;
-  --accent:#ea580c;
-  --soft:#fff7ed;
-}
 body.dark{
   --bg:#0f172a;
   --card:#1e293b;
@@ -38,42 +23,22 @@ body.dark{
   --border:#334155;
   --soft:#1e3a8a;
 }
-body.dark.theme-emerald{--soft:#064e3b}
-body.dark.theme-purple{--soft:#4c1d95}
-body.dark.theme-coral{--soft:#7c2d12}
-
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',Arial,sans-serif;transition:background .2s,color .2s}
-
-/* En-tête + Barre d'interface tout en haut */
-header{background:var(--header-bg);color:white;padding:20px 20px 16px;transition:background .25s}
-.header-inner{max-width:950px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;transition:background .2s,color .2s}
+header{background:var(--header-bg);color:white;padding:22px 20px;transition:background .2s}
 header h1{margin:0;font-size:26px}
-header p{margin:4px 0 0;opacity:.9;font-size:14px}
-
-.top-bar{background:rgba(0,0,0,.22);padding:8px 20px}
-.top-bar-inner{max-width:950px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;font-size:13px;color:white}
-.theme-dots{display:flex;align-items:center;gap:8px}
-.dot{width:22px;height:22px;border-radius:50%;border:2px solid white;cursor:pointer;transition:transform .15s;padding:0;margin:0}
-.dot:hover{transform:scale(1.18)}
-.view-switches{display:flex;gap:6px;align-items:center}
-.top-pill{background:rgba(255,255,255,.16);color:white;border:1px solid rgba(255,255,255,.28);padding:5px 10px;border-radius:20px;font-size:12px;cursor:pointer;margin:0}
-.top-pill:hover,.top-pill.active{background:white;color:#0f172a;font-weight:bold}
-
+header p{margin:6px 0 0;opacity:.9}
 main{max-width:950px;margin:20px auto;padding:12px}
-section{background:var(--card);padding:18px;border-radius:14px;margin-bottom:16px;border:2px solid transparent;transition:.15s;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+section{background:var(--card);padding:18px;border-radius:14px;margin-bottom:16px;border:2px solid transparent;transition:.15s}
 section.dragover-area{border-color:var(--accent);background:var(--soft)}
 input,textarea,select{width:100%;padding:12px;margin:7px 0;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:8px;font:inherit;font-size:16px}
-button{background:var(--accent);color:white;border:0;padding:11px 15px;border-radius:8px;cursor:pointer;margin:4px 4px 4px 0;font-size:15px;transition:opacity .15s,background .2s}
-button:hover{opacity:.88}
+button{background:var(--accent);color:white;border:0;padding:11px 15px;border-radius:8px;cursor:pointer;margin:4px 4px 4px 0;font-size:15px}
+button:hover{opacity:.85}
 .danger{background:#dc2626}
 .secondary{background:#64748b}
-
-.folder{display:inline-flex;align-items:center;gap:6px;background:var(--soft);padding:10px 14px;margin:4px;border-radius:10px;cursor:pointer;border:2px dashed transparent;transition:.15s;user-select:none;font-size:14px}
+.folder{display:inline-block;background:var(--soft);padding:12px 15px;margin:4px;border-radius:10px;cursor:pointer;border:2px dashed transparent;transition:.15s;user-select:none}
 .folder.active{outline:2px solid var(--accent);font-weight:bold}
 .folder.dragover{border-color:var(--accent);transform:scale(1.05)}
-.folder-count{background:var(--card);color:var(--text);padding:1px 7px;border-radius:12px;font-size:12px;font-weight:bold}
-
 .dropzone{border:2px dashed #93c5fd;background:var(--bg);padding:22px;text-align:center;border-radius:12px;margin:10px 0;cursor:pointer;color:var(--muted);transition:.15s}
 .dropzone.dragover{border-color:var(--accent);background:var(--soft);color:var(--text)}
 
@@ -82,34 +47,24 @@ button:hover{opacity:.88}
 .checkbox-label{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;user-select:none}
 .checkbox-label input{width:auto;margin:0}
 
-.folder-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:15px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.folder-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:15px 0 10px}
 .folder-bar h3{margin:0}
 
-/* Modes d'affichage des documents */
 #documents{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
-#documents.list-view{flex-direction:column}
-#documents.list-view .doc{width:100%}
-
 .doc{
-  padding:14px 16px;
+  padding:12px 16px;
   border:1px solid var(--border);
-  border-radius:12px;
+  border-radius:10px;
   background:var(--card);
   width:fit-content;
-  min-width:240px;
+  min-width:220px;
   max-width:100%;
   word-break:break-word;
-  transition:transform .12s,box-shadow .12s;
 }
-.doc:hover{box-shadow:0 4px 12px rgba(0,0,0,.06)}
 .doc.has-text{width:100%}
-.doc-header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.doc-folder-tag{font-size:11px;background:var(--soft);color:var(--accent);padding:2px 7px;border-radius:6px;font-weight:bold}
-body.dark .doc-folder-tag{color:#93c5fd}
-.doc-content{white-space:pre-wrap;margin:8px 0;line-height:1.45}
-.doc-preview-img{max-width:100%;max-height:220px;border-radius:8px;margin-top:8px;display:block;border:1px solid var(--border);cursor:zoom-in}
-
-.file-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+body.compact .doc{padding:8px 12px;min-width:180px;font-size:14px}
+.doc-content{white-space:pre-wrap;margin:8px 0}
+.file-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .file-link{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;background:var(--soft);color:var(--accent);text-decoration:none;border-radius:8px;font-weight:bold;font-size:13px}
 body.dark .file-link{color:#93c5fd}
 .file-link:hover{opacity:.85}
@@ -117,9 +72,8 @@ body.dark .file-link{color:#93c5fd}
 .size-tag{font-weight:normal;color:var(--muted);font-size:12px}
 small{color:var(--muted)}
 nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:15px}
-nav button.active-tab{outline:2px solid var(--text);font-weight:bold}
 .hidden{display:none!important}
-.status{padding:10px 12px;background:var(--soft);border-radius:8px;margin:10px 0;font-weight:bold;font-size:14px}
+.status{padding:10px;background:var(--soft);border-radius:8px;margin:10px 0;font-weight:bold;font-size:14px}
 .badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:bold;background:var(--soft);color:var(--accent);margin-left:8px}
 body.dark .badge{color:#93c5fd}
 
@@ -141,25 +95,801 @@ body.dark .badge{color:#93c5fd}
   .doc{width:100%;min-width:0}
   .file-link{flex:1;justify-content:center}
   .quick-upload-btn{width:100%}
-  .top-bar-inner{justify-content:center}
 }
 </style>
 </head>
 <body>
-
 <header>
-  <div class="header-inner">
-    <div>
-      <h1 id="siteTitle">📚 ClassShare</h1>
-      <p id="siteSubtitle">Le partage des connaissances.</p>
-    </div>
-  </div>
+<h1 id="siteTitle">📚 ClassShare</h1>
+<p id="siteSubtitle">Le partage des connaissances.</p>
 </header>
 
-<div class="top-bar">
-  <div class="top-bar-inner">
-    <div class="theme-dots">
-      <span>Couleur :</span>
-      <button class="dot" data-theme="default" style="background:#2563eb" title="Bleu Classique"></button>
-      <button class="dot" data-theme="emerald" style="background:#059669" title="Vert Émeraude"></button>
-      <button class="dot" data-theme="purple" style="background:#7c3aed" title
+<main>
+<section id="auth">
+<h2>👤 Mon compte</h2>
+<div id="account">
+<input id="email" type="email" placeholder="Adresse e-mail">
+<input id="password" type="password" placeholder="Mot de passe">
+<input id="displayName" placeholder="Prénom ou pseudo (inscription)">
+<button id="signup">Créer un compte</button>
+<button id="login">Se connecter</button>
+</div>
+<div id="connected" class="hidden">
+<p id="userInfo"></p>
+<button id="logout" class="secondary">Se déconnecter</button>
+</div>
+<div id="message" class="status">Connecte-toi ou crée un compte pour contribuer.</div>
+</section>
+
+<nav>
+<button data-tab="library">📁 Dossiers</button>
+<button id="navAdd" data-tab="add" class="hidden">➕ Ajouter</button>
+<button id="navMember" data-tab="memberSpace" class="hidden">👤 Mon espace</button>
+<button id="navManage" data-tab="manage" class="hidden">⚙️ Gestion</button>
+</nav>
+
+<section id="library">
+<h2>📚 Bibliothèque</h2>
+<input id="search" placeholder="🔎 Rechercher un document ou un fichier...">
+<div class="toolbar">
+  <select id="sortOrder">
+    <option value="newest">🕒 Plus récents</option>
+    <option value="oldest">📅 Plus anciens</option>
+    <option value="alpha">🔤 Ordre alphabétique</option>
+  </select>
+  <label id="onlyMineLabel" class="checkbox-label hidden">
+    <input type="checkbox" id="onlyMine"> Uniquement mes partages
+  </label>
+</div>
+<p id="dropHint" class="hidden"><small>💡 Sur PC : glisse un fichier directement ici. Sur téléphone : utilise le bouton ci-dessous.</small></p>
+<div id="folders"></div>
+
+<div class="folder-bar">
+  <h3 id="folderTitle"></h3>
+  <button id="quickUploadBtn" class="quick-upload-btn hidden">📎 Déposer un fichier ici</button>
+  <input id="quickFileInput" type="file" multiple class="hidden">
+</div>
+
+<div id="documents"></div>
+</section>
+
+<section id="add" class="hidden">
+<h2>📝 Ajouter une ressource</h2>
+<select id="destination"></select>
+<input id="title" placeholder="Titre du document (optionnel si tu ajoutes un fichier)">
+<textarea id="content" rows="4" placeholder="Note ou description (optionnel si tu ajoutes un fichier)..."></textarea>
+<div id="dropZone" class="dropzone">
+  📎 Glisse un fichier ici ou <strong>touche pour choisir</strong>
+  <input id="fileInput" type="file" class="hidden">
+  <div id="selectedFileName" style="margin-top:8px;font-weight:bold;color:var(--accent)"></div>
+</div>
+<button id="publish">Publier immédiatement</button>
+</section>
+
+<section id="memberSpace" class="hidden">
+<h2>👤 Mon espace membre</h2>
+<div id="memberContent"></div>
+</section>
+
+<section id="manage" class="hidden">
+<h2>⚙️ Panneau de gestion</h2>
+<div id="management"></div>
+</section>
+</main>
+
+<script type="module">
+import { createClient }
+from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const SUPABASE_URL = "https://twzeosslphrqprfpcxxv.supabase.co";
+const SUPABASE_KEY = "sb_publishable_uknnIKbDO6PvOQxoOHDKIA_3HAWkR6h";
+const BUCKET = "classshare-files";
+
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let user = null;
+let profile = null;
+let folders = [];
+let docs = [];
+let allProfiles = [];
+let settings = {
+  site_title: "📚 ClassShare",
+  site_subtitle: "Le partage des connaissances.",
+  theme_color: "#172554"
+};
+let selected = null;
+let pendingFile = null;
+
+const $ = id => document.getElementById(id);
+
+// Appliquer les préférences visuelles personnelles du membre (stockées sur son appareil)
+function applyPersonalPrefs() {
+  const isDark = localStorage.getItem("cs_dark") === "1";
+  const isCompact = localStorage.getItem("cs_compact") === "1";
+  document.body.classList.toggle("dark", isDark);
+  document.body.classList.toggle("compact", isCompact);
+}
+applyPersonalPrefs();
+
+window.addEventListener("dragover", e => e.preventDefault());
+window.addEventListener("drop", e => e.preventDefault());
+
+function safe(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;",
+    '"': "&quot;", "'": "&#39;"
+  })[c]);
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024) return bytes + " o";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1).replace(".", ",") + " Ko";
+  return (bytes / (1024 * 1024)).toFixed(2).replace(".", ",") + " Mo";
+}
+
+function say(msg) {
+  $("message").textContent = msg;
+}
+
+function isAdmin() {
+  return profile?.role === "admin";
+}
+
+function staff() {
+  return ["admin", "moderator"].includes(profile?.role);
+}
+
+function canPublish() {
+  return !!user && ["admin", "moderator", "member"].includes(profile?.role);
+}
+
+function canManageDoc(doc) {
+  return staff() || (!!user && doc.author_id === user.id);
+}
+
+function applyTheme() {
+  $("siteTitle").textContent = settings.site_title || "📚 ClassShare";
+  $("siteSubtitle").textContent = settings.site_subtitle || "Le partage des connaissances.";
+  document.title = (settings.site_title || "ClassShare").replace(/^[^\w\s]+\s*/, "");
+  document.documentElement.style.setProperty("--header-bg", settings.theme_color || "#172554");
+}
+
+async function loadSettings() {
+  const { data } = await db.from("settings").select("*").eq("id", 1).maybeSingle();
+  if (data) {
+    settings = data;
+    applyTheme();
+  }
+}
+
+async function uploadFile(file) {
+  const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${user.id}/${Date.now()}_${cleanName}`;
+  const { error } = await db.storage.from(BUCKET).upload(path, file);
+  if (error) throw error;
+  const { data } = db.storage.from(BUCKET).getPublicUrl(path);
+  return { url: data.publicUrl, name: file.name, size: formatBytes(file.size) };
+}
+
+async function handleDirectDrop(files, folderId) {
+  if (!canPublish()) return say("⚠️ Connecte-toi pour déposer un fichier.");
+  if (!folderId) return say("⚠️ Crée d'abord un dossier dans Gestion.");
+  if (!files || !files.length) return;
+
+  const folderName = folders.find(f => f.id === folderId)?.name || "ce dossier";
+  say(`⏳ Envoi de ${files.length} fichier(s) vers "${folderName}"...`);
+
+  for (const file of files) {
+    try {
+      const uploaded = await uploadFile(file);
+      const { error } = await db.from("documents").insert({
+        title: file.name,
+        content: "",
+        folder_id: folderId,
+        file_url: uploaded.url,
+        file_name: uploaded.name,
+        file_size: uploaded.size,
+        author_id: user.id,
+        author_name: profile?.display_name || "Membre"
+      });
+      if (error) throw error;
+    } catch (err) {
+      return say("❌ Erreur d'envoi : " + err.message);
+    }
+  }
+
+  selected = folderId;
+  say(`✅ ${files.length} fichier(s) ajouté(s) dans "${folderName}" !`);
+  await load();
+}
+
+$("quickUploadBtn").onclick = () => $("quickFileInput").click();
+$("quickFileInput").onchange = e => {
+  handleDirectDrop(e.target.files, selected);
+  e.target.value = "";
+};
+
+const libSection = $("library");
+libSection.addEventListener("dragover", e => {
+  e.preventDefault();
+  if (canPublish()) libSection.classList.add("dragover-area");
+});
+libSection.addEventListener("dragleave", e => {
+  if (!libSection.contains(e.relatedTarget)) {
+    libSection.classList.remove("dragover-area");
+  }
+});
+libSection.addEventListener("drop", e => {
+  e.preventDefault();
+  libSection.classList.remove("dragover-area");
+  if (e.dataTransfer?.files?.length) {
+    handleDirectDrop(e.dataTransfer.files, selected);
+  }
+});
+
+async function load() {
+  await loadSettings();
+
+  const { data: f, error: fe } = await db.from("folders")
+    .select("id,name").order("name");
+  if (fe) { say("Erreur dossiers : " + fe.message); return; }
+  folders = f || [];
+
+  const { data: d, error: de } = await db.from("documents")
+    .select("id,title,content,author_id,author_name,folder_id,file_url,file_name,file_size,created_at")
+    .order("created_at", { ascending: false });
+  if (de) { say("Erreur documents : " + de.message); return; }
+  docs = d || [];
+
+  if (staff()) {
+    const { data: p } = await db.from("profiles").select("id,display_name,role").order("display_name");
+    allProfiles = p || [];
+  } else {
+    allProfiles = [];
+  }
+
+  if (!folders.some(f => f.id === selected))
+    selected = folders[0]?.id || null;
+
+  render();
+}
+
+async function refreshUser() {
+  const { data: { session } } = await db.auth.getSession();
+  user = session?.user || null;
+  profile = null;
+
+  if (user) {
+    const { data, error } = await db.from("profiles")
+      .select("display_name,role").eq("id", user.id).single();
+    if (error) { say("Profil : " + error.message); }
+    else profile = data;
+  }
+  renderAccount();
+  await load();
+}
+
+function renderAccount() {
+  $("account").classList.toggle("hidden", !!user);
+  $("connected").classList.toggle("hidden", !user);
+  $("navAdd").classList.toggle("hidden", !canPublish());
+  $("navMember").classList.toggle("hidden", !user);
+  $("navManage").classList.toggle("hidden", !staff());
+  $("dropHint").classList.toggle("hidden", !canPublish());
+  $("onlyMineLabel").classList.toggle("hidden", !user);
+  $("quickUploadBtn").classList.toggle("hidden", !canPublish() || !selected);
+
+  if (!canPublish() && !$("add").classList.contains("hidden")) showTab("library");
+  if (!user && !$("memberSpace").classList.contains("hidden")) showTab("library");
+  if (!staff() && !$("manage").classList.contains("hidden")) showTab("library");
+
+  if (user) {
+    const roleLabel = profile?.role === "admin" ? "Administrateur"
+      : profile?.role === "moderator" ? "Modérateur"
+      : "Membre";
+    $("userInfo").innerHTML = `Connecté en tant que <strong>${safe(profile?.display_name || user.email)}</strong> <span class="badge">${roleLabel}</span>`;
+  } else {
+    $("userInfo").textContent = "";
+    $("onlyMine").checked = false;
+  }
+}
+
+function render() {
+  $("folders").innerHTML = folders.map(f =>
+    `<div class="folder ${f.id === selected ? "active" : ""}"
+    data-folder="${f.id}">📁 ${safe(f.name)}</div>`
+  ).join("");
+
+  $("folderTitle").textContent =
+    folders.find(f => f.id === selected)?.name || "Aucun dossier";
+
+  $("quickUploadBtn").classList.toggle("hidden", !canPublish() || !selected);
+
+  $("destination").innerHTML = folders.map(f =>
+    `<option value="${f.id}">${safe(f.name)}</option>`
+  ).join("");
+
+  if (selected) $("destination").value = selected;
+
+  const q = $("search").value.toLowerCase();
+  const onlyMine = $("onlyMine").checked;
+  const sort = $("sortOrder").value;
+
+  let filtered = docs.filter(d =>
+    d.folder_id === selected &&
+    (!onlyMine || (user && d.author_id === user.id)) &&
+    (d.title + " " + (d.content || "") + " " + (d.file_name || "") + " " + d.author_name)
+      .toLowerCase().includes(q)
+  );
+
+  if (sort === "oldest") {
+    filtered = [...filtered].reverse();
+  } else if (sort === "alpha") {
+    filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
+  }
+
+  $("documents").innerHTML = filtered.length ?
+    filtered.map(d => {
+      const hasText = !!(d.content && d.content.trim());
+      const editable = canManageDoc(d);
+      return `
+      <div class="doc ${hasText ? "has-text" : ""}">
+        <strong>${safe(d.title)}</strong><br>
+        <small>Par ${safe(d.author_name)}</small>
+        ${hasText ? `<div class="doc-content">${safe(d.content)}</div>` : ""}
+        ${d.file_url ? `
+          <div class="file-actions">
+            <a class="file-link" href="${safe(d.file_url)}" target="_blank" rel="noopener">📎 ${safe(d.file_name || "Télécharger")} ${d.file_size ? `<span class="size-tag">(${safe(d.file_size)})</span>` : ""}</a>
+            <button class="copy-btn" data-copy="${safe(d.file_url)}" title="Copier le lien">🔗</button>
+          </div>` : ""}
+        ${editable ? `
+        <div style="margin-top:8px">
+          <button data-edit="${d.id}" style="padding:6px 10px;font-size:13px">✏️ Modifier</button>
+          <button class="danger" data-delete="${d.id}" style="padding:6px 10px;font-size:13px">🗑️ Supprimer</button>
+        </div>
+        ` : ""}
+      </div>`;
+    }).join("") : "<p>Aucun document trouvé dans ce dossier.</p>";
+
+  // Espace personnel pour TOUS les membres connectés
+  if (user) {
+    const myDocs = docs.filter(d => d.author_id === user.id);
+    const isDark = localStorage.getItem("cs_dark") === "1";
+    const isCompact = localStorage.getItem("cs_compact") === "1";
+
+    $("memberContent").innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><strong>${myDocs.length}</strong><small>Mes partages</small></div>
+        <div class="stat-card"><strong>${folders.length}</strong><small>Dossiers actifs</small></div>
+        <div class="stat-card"><strong>${docs.length}</strong><small>Total ressources</small></div>
+      </div>
+
+      <div class="panel-box">
+        <h3>🪪 Mon profil</h3>
+        <label><small>Mon prénom ou pseudo affiché sur mes publications</small></label>
+        <div style="display:flex;gap:8px">
+          <input id="myNewName" value="${safe(profile?.display_name || "")}" style="margin:0">
+          <button id="saveMyName" style="margin:0;white-space:nowrap">Enregistrer</button>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <h3>🎨 Préférences d'affichage (sur cet appareil)</h3>
+        <div class="row-item">
+          <span>🌙 Mode sombre</span>
+          <label class="checkbox-label"><input type="checkbox" id="toggleDark" ${isDark ? "checked" : ""}> Activer</label>
+        </div>
+        <div class="row-item">
+          <span>📐 Affichage compact des fichiers</span>
+          <label class="checkbox-label"><input type="checkbox" id="toggleCompact" ${isCompact ? "checked" : ""}> Activer</label>
+        </div>
+      </div>
+
+      <div class="panel-box">
+        <h3>📂 Mes publications (${myDocs.length})</h3>
+        ${myDocs.length ? myDocs.map(d => {
+          const folderName = folders.find(f => f.id === d.folder_id)?.name || "Dossier";
+          return `
+          <div class="row-item">
+            <div>
+              <strong>${safe(d.title)}</strong><br>
+              <small>Dans 📁 ${safe(folderName)}</small>
+            </div>
+            <div>
+              <button data-edit="${d.id}" style="padding:6px 10px;font-size:13px">✏️</button>
+              <button class="danger" data-delete="${d.id}" style="padding:6px 10px;font-size:13px">🗑️</button>
+            </div>
+          </div>`;
+        }).join("") : "<p><small>Tu n'as encore rien publié. Glisse un fichier dans un dossier pour commencer !</small></p>"}
+      </div>
+    `;
+  } else {
+    $("memberContent").innerHTML = "";
+  }
+
+  // Panneau de gestion Staff / Admin
+  if (staff()) {
+    $("management").innerHTML = `
+      <div class="panel-box">
+        <h3>📁 Dossiers (${folders.length})</h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input id="newFolder" placeholder="Nom du nouveau dossier" style="margin:0">
+          <button id="createFolder" style="margin:0;white-space:nowrap">+ Créer</button>
+        </div>
+        ${folders.map(f => {
+          const count = docs.filter(d => d.folder_id === f.id).length;
+          return `
+          <div class="row-item">
+            <span>📁 <strong>${safe(f.name)}</strong> <small>(${count} ressource${count > 1 ? "s" : ""})</small></span>
+            <div>
+              <button class="secondary" data-rename-folder="${f.id}" style="padding:6px 10px;font-size:13px">✏️ Renommer</button>
+              <button class="danger" data-remove-folder="${f.id}" style="padding:6px 10px;font-size:13px">🗑️ Supprimer</button>
+            </div>
+          </div>`;
+        }).join("")}
+      </div>
+
+      ${isAdmin() ? `
+      <div class="panel-box">
+        <h3>🎨 Apparence globale du site</h3>
+        <label><small>Titre du site</small></label>
+        <input id="cfgTitle" value="${safe(settings.site_title)}">
+        <label><small>Slogan / sous-titre</small></label>
+        <input id="cfgSubtitle" value="${safe(settings.site_subtitle)}">
+        <div class="color-picker-row">
+          <label><small>Couleur du bandeau :</small></label>
+          <input id="cfgColor" type="color" value="${safe(settings.theme_color || "#172554")}">
+        </div>
+        <button id="saveSettings">💾 Enregistrer l'interface</button>
+      </div>
+
+      <div class="panel-box">
+        <h3>👥 Membres et rôles (${allProfiles.length})</h3>
+        ${allProfiles.map(p => `
+          <div class="row-item">
+            <span>👤 <strong>${safe(p.display_name || "Sans nom")}</strong> ${p.id === user.id ? "<small>(Toi)</small>" : ""}</span>
+            <select data-role-user="${p.id}" ${p.id === user.id ? "disabled" : ""}>
+              <option value="member" ${p.role === "member" ? "selected" : ""}>Membre</option>
+              <option value="moderator" ${p.role === "moderator" ? "selected" : ""}>Modérateur</option>
+              <option value="admin" ${p.role === "admin" ? "selected" : ""}>Administrateur</option>
+            </select>
+          </div>
+        `).join("")}
+      </div>
+      ` : ""}
+
+      <div class="panel-box">
+        <h3>📦 Sauvegarde</h3>
+        <p><small>Télécharge une copie complète de tous les dossiers et documents du site.</small></p>
+        <button id="exportData" class="secondary">⬇️ Exporter les données (JSON)</button>
+      </div>
+    `;
+  } else {
+    $("management").innerHTML = "";
+  }
+
+  bindActions();
+}
+
+function bindActions() {
+  document.querySelectorAll("[data-folder]").forEach(el => {
+    const folderId = el.dataset.folder;
+    el.onclick = () => {
+      selected = folderId;
+      render();
+    };
+    el.ondragover = e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (canPublish()) el.classList.add("dragover");
+    };
+    el.ondragleave = () => el.classList.remove("dragover");
+    el.ondrop = e => {
+      e.preventDefault();
+      e.stopPropagation();
+      el.classList.remove("dragover");
+      libSection.classList.remove("dragover-area");
+      handleDirectDrop(e.dataTransfer.files, folderId);
+    };
+  });
+
+  document.querySelectorAll("[data-copy]").forEach(el => {
+    el.onclick = async () => {
+      await navigator.clipboard.writeText(el.dataset.copy);
+      say("🔗 Lien du fichier copié dans le presse-papiers !");
+    };
+  });
+
+  document.querySelectorAll("[data-delete]").forEach(el => {
+    el.onclick = () => deleteDoc(el.dataset.delete);
+  });
+
+  document.querySelectorAll("[data-edit]").forEach(el => {
+    el.onclick = () => editDoc(el.dataset.edit);
+  });
+
+  document.querySelectorAll("[data-remove-folder]").forEach(el => {
+    el.onclick = () => deleteFolder(el.dataset.removeFolder);
+  });
+
+  document.querySelectorAll("[data-rename-folder]").forEach(el => {
+    el.onclick = () => renameFolder(el.dataset.renameFolder);
+  });
+
+  document.querySelectorAll("[data-role-user]").forEach(el => {
+    el.onchange = () => changeUserRole(el.dataset.roleUser, el.value);
+  });
+
+  const saveNameBtn = $("saveMyName");
+  if (saveNameBtn) saveNameBtn.onclick = updateMyDisplayName;
+
+  const darkToggle = $("toggleDark");
+  if (darkToggle) darkToggle.onchange = () => {
+    localStorage.setItem("cs_dark", darkToggle.checked ? "1" : "0");
+    applyPersonalPrefs();
+  };
+
+  const compactToggle = $("toggleCompact");
+  if (compactToggle) compactToggle.onchange = () => {
+    localStorage.setItem("cs_compact", compactToggle.checked ? "1" : "0");
+    applyPersonalPrefs();
+  };
+
+  const create = $("createFolder");
+  if (create) create.onclick = addFolder;
+
+  const saveCfg = $("saveSettings");
+  if (saveCfg) saveCfg.onclick = saveInterfaceSettings;
+
+  const exp = $("exportData");
+  if (exp) exp.onclick = exportBackup;
+}
+
+async function updateMyDisplayName() {
+  if (!user) return;
+  const newName = $("myNewName").value.trim();
+  if (!newName) return say("Entre un pseudo valide.");
+
+  const { error } = await db.from("profiles")
+    .update({ display_name: newName })
+    .eq("id", user.id);
+
+  if (error) return say("Erreur mise à jour pseudo : " + error.message);
+  say("✅ Ton pseudo a été mis à jour !");
+  await refreshUser();
+}
+
+async function saveInterfaceSettings() {
+  if (!isAdmin()) return;
+  const site_title = $("cfgTitle").value.trim() || "📚 ClassShare";
+  const site_subtitle = $("cfgSubtitle").value.trim() || "Le partage des connaissances.";
+  const theme_color = $("cfgColor").value || "#172554";
+
+  const { error } = await db.from("settings").upsert({
+    id: 1, site_title, site_subtitle, theme_color
+  });
+
+  if (error) return say("Erreur sauvegarde interface : " + error.message);
+  settings = { id: 1, site_title, site_subtitle, theme_color };
+  applyTheme();
+  say("✅ Apparence du site mise à jour !");
+}
+
+async function changeUserRole(targetId, newRole) {
+  if (!isAdmin()) return;
+  const { error } = await db.from("profiles")
+    .update({ role: newRole })
+    .eq("id", targetId);
+
+  if (error) {
+    say("Erreur changement de rôle : " + error.message);
+    return await load();
+  }
+  say("✅ Rôle mis à jour !");
+  await load();
+}
+
+function exportBackup() {
+  const backup = {
+    exported_at: new Date().toISOString(),
+    settings,
+    folders,
+    documents: docs
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `classshare-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+}
+
+const dz = $("dropZone");
+const fi = $("fileInput");
+dz.onclick = () => fi.click();
+fi.onchange = () => {
+  pendingFile = fi.files[0] || null;
+  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name} (${formatBytes(pendingFile.size)})` : "";
+};
+dz.ondragover = e => { e.preventDefault(); e.stopPropagation(); dz.classList.add("dragover"); };
+dz.ondragleave = () => dz.classList.remove("dragover");
+dz.ondrop = e => {
+  e.preventDefault();
+  e.stopPropagation();
+  dz.classList.remove("dragover");
+  pendingFile = e.dataTransfer.files[0] || null;
+  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name} (${formatBytes(pendingFile.size)})` : "";
+};
+
+async function addFolder() {
+  if (!staff()) return;
+  const name = $("newFolder").value.trim();
+  if (!name) return say("Entre un nom de dossier.");
+  const { error } = await db.from("folders").insert({ name });
+  if (error) return say(error.message);
+  say("Dossier créé !");
+  await load();
+}
+
+async function renameFolder(id) {
+  if (!staff()) return;
+  const current = folders.find(f => f.id === id);
+  if (!current) return;
+  const name = prompt("Nouveau nom du dossier :", current.name);
+  if (!name || !name.trim() || name.trim() === current.name) return;
+  const { error } = await db.from("folders").update({ name: name.trim() }).eq("id", id);
+  if (error) return say(error.message);
+  say("Dossier renommé !");
+  await load();
+}
+
+async function deleteFolder(id) {
+  if (!staff() || !confirm("Supprimer ce dossier et tous ses documents ?")) return;
+  const { error } = await db.from("folders").delete().eq("id", id);
+  if (error) return say(error.message);
+  say("Dossier supprimé.");
+  await load();
+}
+
+async function addDoc() {
+  if (!canPublish()) return say("Connexion nécessaire.");
+  let title = $("title").value.trim();
+  const content = $("content").value.trim();
+  const folder_id = $("destination").value;
+
+  if (!folder_id) return say("Choisis un dossier.");
+  if (!title && !content && !pendingFile)
+    return say("Ajoute un titre, un texte ou un fichier.");
+
+  $("publish").disabled = true;
+  say("Publication en cours...");
+
+  try {
+    let file_url = null;
+    let file_name = null;
+    let file_size = null;
+
+    if (pendingFile) {
+      const uploaded = await uploadFile(pendingFile);
+      file_url = uploaded.url;
+      file_name = uploaded.name;
+      file_size = uploaded.size;
+      if (!title) title = pendingFile.name;
+    }
+
+    const { error } = await db.from("documents").insert({
+      title: title || "Sans titre",
+      content,
+      folder_id,
+      file_url,
+      file_name,
+      file_size,
+      author_id: user.id,
+      author_name: profile?.display_name || "Membre"
+    });
+
+    if (error) throw error;
+
+    $("title").value = "";
+    $("content").value = "";
+    pendingFile = null;
+    fi.value = "";
+    $("selectedFileName").textContent = "";
+    say("Ressource publiée !");
+    await load();
+    showTab("library");
+  } catch (err) {
+    say("Erreur : " + err.message);
+  } finally {
+    $("publish").disabled = false;
+  }
+}
+
+async function deleteDoc(id) {
+  const doc = docs.find(x => x.id === id);
+  if (!doc || !canManageDoc(doc)) return;
+  if (!confirm("Supprimer ce document ?")) return;
+  const { error } = await db.from("documents").delete().eq("id", id);
+  if (error) return say(error.message);
+  say("Document supprimé.");
+  await load();
+}
+
+async function editDoc(id) {
+  const d = docs.find(x => x.id === id);
+  if (!d || !canManageDoc(d)) return;
+
+  const title = prompt("Nouveau titre :", d.title);
+  if (title === null) return;
+  const content = prompt("Nouveau contenu :", d.content || "");
+  if (content === null) return;
+
+  const { error } = await db.from("documents").update({
+    title: title.trim() || d.title, content
+  }).eq("id", id);
+
+  if (error) return say(error.message);
+  say("Document modifié.");
+  await load();
+}
+
+async function signup() {
+  const email = $("email").value.trim();
+  const password = $("password").value;
+  const display_name = $("displayName").value.trim() || "Membre";
+  if (!email || password.length < 8)
+    return say("Entre un e-mail et un mot de passe d'au moins 8 caractères.");
+
+  const { data, error } = await db.auth.signUp({
+    email, password,
+    options: { data: { display_name } }
+  });
+  if (error) return say(error.message);
+  if (!data.session)
+    return say("Compte créé ! Vérifie ta boîte e-mail pour confirmer ton inscription.");
+  await refreshUser();
+  say("Bienvenue sur ClassShare !");
+}
+
+async function login() {
+  const { error } = await db.auth.signInWithPassword({
+    email: $("email").value.trim(),
+    password: $("password").value
+  });
+  if (error) return say(error.message);
+  await refreshUser();
+  say("Connexion réussie !");
+}
+
+async function logout() {
+  await db.auth.signOut();
+  await refreshUser();
+  say("Déconnexion réussie.");
+}
+
+function showTab(tab) {
+  ["library", "add", "memberSpace", "manage"].forEach(id => {
+    $(id).classList.toggle("hidden", id !== tab);
+  });
+}
+
+$("signup").onclick = signup;
+$("login").onclick = login;
+$("logout").onclick = logout;
+$("publish").onclick = addDoc;
+$("search").oninput = render;
+$("sortOrder").onchange = render;
+$("onlyMine").onchange = render;
+
+document.querySelectorAll("[data-tab]").forEach(el => {
+  el.onclick = () => showTab(el.dataset.tab);
+});
+
+db.auth.onAuthStateChange(() => {
+  setTimeout(() => refreshUser(), 0);
+});
+
+await refreshUser();
+</script>
+</body>
+</html>
