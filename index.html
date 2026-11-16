@@ -22,9 +22,29 @@ button:hover{opacity:.85}
 .folder.dragover{border-color:#2563eb;background:#93c5fd;transform:scale(1.05)}
 .dropzone{border:2px dashed #93c5fd;background:#f8fafc;padding:25px;text-align:center;border-radius:12px;margin:10px 0;cursor:pointer;color:#475569;transition:.15s}
 .dropzone.dragover{border-color:#2563eb;background:#eff6ff;color:#1e40af}
-.doc{padding:14px;border:1px solid #e2e8f0;border-radius:10px;margin:12px 0;white-space:pre-wrap;background:white}
-.file-link{display:inline-block;margin-top:8px;padding:8px 12px;background:#eff6ff;color:#1d4ed8;text-decoration:none;border-radius:8px;font-weight:bold;font-size:14px}
+
+/* Conteneur adaptatif pour les documents et fichiers */
+#documents{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
+.doc{
+  padding:12px 16px;
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+  background:white;
+  width:fit-content;
+  min-width:220px;
+  max-width:100%;
+  word-break:break-word;
+}
+.doc.has-text{
+  width:100%;
+}
+.doc-content{
+  white-space:pre-wrap;
+  margin:8px 0;
+}
+.file-link{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:7px 11px;background:#eff6ff;color:#1d4ed8;text-decoration:none;border-radius:8px;font-weight:bold;font-size:13px}
 .file-link:hover{background:#dbeafe}
+.size-tag{font-weight:normal;color:#475569;font-size:12px}
 small{color:#64748b}
 nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}
 .hidden{display:none!important}
@@ -108,7 +128,6 @@ let pendingFile = null;
 
 const $ = id => document.getElementById(id);
 
-// Empêche le navigateur d'ouvrir le fichier si on le lâche n'importe où sur la page
 window.addEventListener("dragover", e => e.preventDefault());
 window.addEventListener("drop", e => e.preventDefault());
 
@@ -117,6 +136,13 @@ function safe(s) {
     "&": "&amp;", "<": "&lt;", ">": "&gt;",
     '"': "&quot;", "'": "&#39;"
   })[c]);
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return "";
+  if (bytes < 1024) return bytes + " o";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1).replace(".", ",") + " Ko";
+  return (bytes / (1024 * 1024)).toFixed(2).replace(".", ",") + " Mo";
 }
 
 function say(msg) {
@@ -137,7 +163,7 @@ async function uploadFile(file) {
   const { error } = await db.storage.from(BUCKET).upload(path, file);
   if (error) throw error;
   const { data } = db.storage.from(BUCKET).getPublicUrl(path);
-  return { url: data.publicUrl, name: file.name };
+  return { url: data.publicUrl, name: file.name, size: formatBytes(file.size) };
 }
 
 async function handleDirectDrop(files, folderId) {
@@ -157,6 +183,7 @@ async function handleDirectDrop(files, folderId) {
         folder_id: folderId,
         file_url: uploaded.url,
         file_name: uploaded.name,
+        file_size: uploaded.size,
         author_name: profile?.display_name || "Membre"
       });
       if (error) throw error;
@@ -170,7 +197,6 @@ async function handleDirectDrop(files, folderId) {
   await load();
 }
 
-// Zone de dépôt géante sur toute la section Bibliothèque
 const libSection = $("library");
 libSection.addEventListener("dragover", e => {
   e.preventDefault();
@@ -196,7 +222,7 @@ async function load() {
   folders = f || [];
 
   const { data: d, error: de } = await db.from("documents")
-    .select("id,title,content,author_name,folder_id,file_url,file_name,created_at")
+    .select("id,title,content,author_name,folder_id,file_url,file_name,file_size,created_at")
     .order("created_at", { ascending: false });
   if (de) { say("Erreur documents : " + de.message); return; }
   docs = d || [];
@@ -266,19 +292,22 @@ function render() {
   );
 
   $("documents").innerHTML = filtered.length ?
-    filtered.map(d => `
-    <div class="doc">
-    <strong>${safe(d.title)}</strong><br>
-    <small>Par ${safe(d.author_name)}</small>
-    ${d.content ? `<p>${safe(d.content)}</p>` : ""}
-    ${d.file_url ? `<br><a class="file-link" href="${safe(d.file_url)}" target="_blank" rel="noopener">📎 Télécharger : ${safe(d.file_name || "Fichier")}</a>` : ""}
-    ${staff() ? `
-    <div style="margin-top:8px">
-      <button data-edit="${d.id}">✏️ Modifier</button>
-      <button class="danger" data-delete="${d.id}">🗑️ Supprimer</button>
-    </div>
-    ` : ""}
-    </div>`).join("") : "<p>Aucun document trouvé. Glisse un fichier ici pour commencer !</p>";
+    filtered.map(d => {
+      const hasText = !!(d.content && d.content.trim());
+      return `
+      <div class="doc ${hasText ? "has-text" : ""}">
+        <strong>${safe(d.title)}</strong><br>
+        <small>Par ${safe(d.author_name)}</small>
+        ${hasText ? `<div class="doc-content">${safe(d.content)}</div>` : ""}
+        ${d.file_url ? `<div><a class="file-link" href="${safe(d.file_url)}" target="_blank" rel="noopener">📎 ${safe(d.file_name || "Télécharger")} ${d.file_size ? `<span class="size-tag">(${safe(d.file_size)})</span>` : ""}</a></div>` : ""}
+        ${staff() ? `
+        <div style="margin-top:8px">
+          <button data-edit="${d.id}" style="padding:6px 10px;font-size:12px">✏️ Modifier</button>
+          <button class="danger" data-delete="${d.id}" style="padding:6px 10px;font-size:12px">🗑️ Supprimer</button>
+        </div>
+        ` : ""}
+      </div>`;
+    }).join("") : "<p>Aucun document trouvé. Glisse un fichier ici pour commencer !</p>";
 
   $("management").innerHTML = staff() ? `
     <h3>Créer un dossier</h3>
@@ -302,3 +331,208 @@ function bindActions() {
     el.onclick = () => {
       selected = folderId;
       render();
+    };
+    el.ondragover = e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (canPublish()) el.classList.add("dragover");
+    };
+    el.ondragleave = () => el.classList.remove("dragover");
+    el.ondrop = e => {
+      e.preventDefault();
+      e.stopPropagation();
+      el.classList.remove("dragover");
+      libSection.classList.remove("dragover-area");
+      handleDirectDrop(e.dataTransfer.files, folderId);
+    };
+  });
+
+  document.querySelectorAll("[data-delete]").forEach(el => {
+    el.onclick = () => deleteDoc(el.dataset.delete);
+  });
+
+  document.querySelectorAll("[data-edit]").forEach(el => {
+    el.onclick = () => editDoc(el.dataset.edit);
+  });
+
+  document.querySelectorAll("[data-remove-folder]").forEach(el => {
+    el.onclick = () => deleteFolder(el.dataset.removeFolder);
+  });
+
+  const create = $("createFolder");
+  if (create) create.onclick = addFolder;
+}
+
+const dz = $("dropZone");
+const fi = $("fileInput");
+dz.onclick = () => fi.click();
+fi.onchange = () => {
+  pendingFile = fi.files[0] || null;
+  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name} (${formatBytes(pendingFile.size)})` : "";
+};
+dz.ondragover = e => { e.preventDefault(); e.stopPropagation(); dz.classList.add("dragover"); };
+dz.ondragleave = () => dz.classList.remove("dragover");
+dz.ondrop = e => {
+  e.preventDefault();
+  e.stopPropagation();
+  dz.classList.remove("dragover");
+  pendingFile = e.dataTransfer.files[0] || null;
+  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name} (${formatBytes(pendingFile.size)})` : "";
+};
+
+async function addFolder() {
+  if (!staff()) return;
+  const name = $("newFolder").value.trim();
+  if (!name) return say("Entre un nom de dossier.");
+  const { error } = await db.from("folders").insert({ name });
+  if (error) return say(error.message);
+  say("Dossier créé !");
+  await load();
+}
+
+async function deleteFolder(id) {
+  if (!staff() || !confirm("Supprimer ce dossier et ses documents ?")) return;
+  const { error } = await db.from("folders").delete().eq("id", id);
+  if (error) return say(error.message);
+  say("Dossier supprimé.");
+  await load();
+}
+
+async function addDoc() {
+  if (!canPublish()) return say("Connexion nécessaire.");
+  let title = $("title").value.trim();
+  const content = $("content").value.trim();
+  const folder_id = $("destination").value;
+
+  if (!folder_id) return say("Choisis un dossier.");
+  if (!title && !content && !pendingFile)
+    return say("Ajoute un titre, un texte ou un fichier.");
+
+  $("publish").disabled = true;
+  say("Publication en cours...");
+
+  try {
+    let file_url = null;
+    let file_name = null;
+    let file_size = null;
+
+    if (pendingFile) {
+      const uploaded = await uploadFile(pendingFile);
+      file_url = uploaded.url;
+      file_name = uploaded.name;
+      file_size = uploaded.size;
+      if (!title) title = pendingFile.name;
+    }
+
+    const { error } = await db.from("documents").insert({
+      title: title || "Sans titre",
+      content,
+      folder_id,
+      file_url,
+      file_name,
+      file_size,
+      author_name: profile?.display_name || "Membre"
+    });
+
+    if (error) throw error;
+
+    $("title").value = "";
+    $("content").value = "";
+    pendingFile = null;
+    fi.value = "";
+    $("selectedFileName").textContent = "";
+    say("Ressource publiée !");
+    await load();
+    showTab("library");
+  } catch (err) {
+    say("Erreur : " + err.message);
+  } finally {
+    $("publish").disabled = false;
+  }
+}
+
+async function deleteDoc(id) {
+  if (!staff() || !confirm("Supprimer ce document ?")) return;
+  const { error } = await db.from("documents").delete().eq("id", id);
+  if (error) return say(error.message);
+  say("Document supprimé.");
+  await load();
+}
+
+async function editDoc(id) {
+  if (!staff()) return;
+  const d = docs.find(x => x.id === id);
+  if (!d) return;
+
+  const title = prompt("Nouveau titre :", d.title);
+  if (title === null) return;
+  const content = prompt("Nouveau contenu :", d.content || "");
+  if (content === null) return;
+
+  const { error } = await db.from("documents").update({
+    title: title.trim() || d.title, content
+  }).eq("id", id);
+
+  if (error) return say(error.message);
+  say("Document modifié.");
+  await load();
+}
+
+async function signup() {
+  const email = $("email").value.trim();
+  const password = $("password").value;
+  const display_name = $("displayName").value.trim() || "Membre";
+  if (!email || password.length < 8)
+    return say("Entre un e-mail et un mot de passe d'au moins 8 caractères.");
+
+  const { data, error } = await db.auth.signUp({
+    email, password,
+    options: { data: { display_name } }
+  });
+  if (error) return say(error.message);
+  if (!data.session)
+    return say("Compte créé ! Vérifie ta boîte e-mail pour confirmer ton inscription.");
+  await refreshUser();
+  say("Bienvenue sur ClassShare !");
+}
+
+async function login() {
+  const { error } = await db.auth.signInWithPassword({
+    email: $("email").value.trim(),
+    password: $("password").value
+  });
+  if (error) return say(error.message);
+  await refreshUser();
+  say("Connexion réussie !");
+}
+
+async function logout() {
+  await db.auth.signOut();
+  await refreshUser();
+  say("Déconnexion réussie.");
+}
+
+function showTab(tab) {
+  ["library", "add", "manage"].forEach(id => {
+    $(id).classList.toggle("hidden", id !== tab);
+  });
+}
+
+$("signup").onclick = signup;
+$("login").onclick = login;
+$("logout").onclick = logout;
+$("publish").onclick = addDoc;
+$("search").oninput = render;
+
+document.querySelectorAll("[data-tab]").forEach(el => {
+  el.onclick = () => showTab(el.dataset.tab);
+});
+
+db.auth.onAuthStateChange(() => {
+  setTimeout(() => refreshUser(), 0);
+});
+
+await refreshUser();
+</script>
+</body>
+</html>
