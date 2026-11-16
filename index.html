@@ -10,7 +10,8 @@ body{margin:0;background:#f1f5f9;color:#172033;font-family:Arial}
 header{background:#172554;color:white;padding:25px}
 header h1{margin:0}
 main{max-width:950px;margin:25px auto;padding:15px}
-section{background:white;padding:20px;border-radius:14px;margin-bottom:18px}
+section{background:white;padding:20px;border-radius:14px;margin-bottom:18px;border:2px solid transparent;transition:.15s}
+section.dragover-area{border-color:#2563eb;background:#f0f7ff}
 input,textarea,select{width:100%;padding:12px;margin:7px 0;border:1px solid #dce1eb;border-radius:8px;font:inherit}
 button{background:#2563eb;color:white;border:0;padding:11px 15px;border-radius:8px;cursor:pointer;margin:4px}
 button:hover{opacity:.85}
@@ -18,16 +19,16 @@ button:hover{opacity:.85}
 .secondary{background:#64748b}
 .folder{display:inline-block;background:#eff6ff;padding:13px 16px;margin:5px;border-radius:10px;cursor:pointer;border:2px dashed transparent;transition:.15s}
 .folder.active{outline:2px solid #2563eb;background:#dbeafe}
-.folder.dragover{border-color:#2563eb;background:#bfdbfe;transform:scale(1.04)}
+.folder.dragover{border-color:#2563eb;background:#93c5fd;transform:scale(1.05)}
 .dropzone{border:2px dashed #93c5fd;background:#f8fafc;padding:25px;text-align:center;border-radius:12px;margin:10px 0;cursor:pointer;color:#475569;transition:.15s}
 .dropzone.dragover{border-color:#2563eb;background:#eff6ff;color:#1e40af}
-.doc{padding:14px;border:1px solid #e2e8f0;border-radius:10px;margin:12px 0;white-space:pre-wrap}
+.doc{padding:14px;border:1px solid #e2e8f0;border-radius:10px;margin:12px 0;white-space:pre-wrap;background:white}
 .file-link{display:inline-block;margin-top:8px;padding:8px 12px;background:#eff6ff;color:#1d4ed8;text-decoration:none;border-radius:8px;font-weight:bold;font-size:14px}
 .file-link:hover{background:#dbeafe}
 small{color:#64748b}
 nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}
 .hidden{display:none!important}
-.status{padding:10px;background:#eff6ff;border-radius:8px;margin:10px 0}
+.status{padding:10px;background:#eff6ff;border-radius:8px;margin:10px 0;font-weight:bold}
 .badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:bold;background:#dbeafe;color:#1e40af;margin-left:8px}
 </style>
 </head>
@@ -63,7 +64,7 @@ nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}
 <section id="library">
 <h2>📚 Bibliothèque</h2>
 <input id="search" placeholder="🔎 Rechercher un document ou un fichier...">
-<p id="dropHint" class="hidden"><small>💡 Astuce : Glisse directement un fichier depuis ton ordinateur sur un dossier ci-dessous pour l'ajouter instantanément.</small></p>
+<p id="dropHint" class="hidden"><small>💡 Astuce : Glisse un fichier <strong>n'importe où dans ce cadre blanc</strong> (pour le mettre dans le dossier ouvert) ou directement sur un dossier précis.</small></p>
 <div id="folders"></div>
 <h3 id="folderTitle"></h3>
 <div id="documents"></div>
@@ -107,6 +108,10 @@ let pendingFile = null;
 
 const $ = id => document.getElementById(id);
 
+// Empêche le navigateur d'ouvrir le fichier si on le lâche n'importe où sur la page
+window.addEventListener("dragover", e => e.preventDefault());
+window.addEventListener("drop", e => e.preventDefault());
+
 function safe(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;",
@@ -136,11 +141,12 @@ async function uploadFile(file) {
 }
 
 async function handleDirectDrop(files, folderId) {
-  if (!canPublish()) return say("Connecte-toi pour déposer un fichier.");
+  if (!canPublish()) return say("⚠️ Connecte-toi pour déposer un fichier.");
+  if (!folderId) return say("⚠️ Crée d'abord un dossier dans Gestion.");
   if (!files || !files.length) return;
 
   const folderName = folders.find(f => f.id === folderId)?.name || "ce dossier";
-  say(`Envoi de ${files.length} fichier(s) vers "${folderName}"...`);
+  say(`⏳ Envoi de ${files.length} fichier(s) vers "${folderName}"...`);
 
   for (const file of files) {
     try {
@@ -155,7 +161,7 @@ async function handleDirectDrop(files, folderId) {
       });
       if (error) throw error;
     } catch (err) {
-      return say("Erreur d'envoi : " + err.message);
+      return say("❌ Erreur d'envoi : " + err.message);
     }
   }
 
@@ -163,6 +169,25 @@ async function handleDirectDrop(files, folderId) {
   say(`✅ ${files.length} fichier(s) ajouté(s) dans "${folderName}" !`);
   await load();
 }
+
+// Zone de dépôt géante sur toute la section Bibliothèque
+const libSection = $("library");
+libSection.addEventListener("dragover", e => {
+  e.preventDefault();
+  if (canPublish()) libSection.classList.add("dragover-area");
+});
+libSection.addEventListener("dragleave", e => {
+  if (!libSection.contains(e.relatedTarget)) {
+    libSection.classList.remove("dragover-area");
+  }
+});
+libSection.addEventListener("drop", e => {
+  e.preventDefault();
+  libSection.classList.remove("dragover-area");
+  if (e.dataTransfer?.files?.length) {
+    handleDirectDrop(e.dataTransfer.files, selected);
+  }
+});
 
 async function load() {
   const { data: f, error: fe } = await db.from("folders")
@@ -253,7 +278,7 @@ function render() {
       <button class="danger" data-delete="${d.id}">🗑️ Supprimer</button>
     </div>
     ` : ""}
-    </div>`).join("") : "<p>Aucun document trouvé.</p>";
+    </div>`).join("") : "<p>Aucun document trouvé. Glisse un fichier ici pour commencer !</p>";
 
   $("management").innerHTML = staff() ? `
     <h3>Créer un dossier</h3>
@@ -277,203 +302,3 @@ function bindActions() {
     el.onclick = () => {
       selected = folderId;
       render();
-    };
-    // Glisser-déposer direct sur chaque dossier
-    el.ondragover = e => {
-      e.preventDefault();
-      if (canPublish()) el.classList.add("dragover");
-    };
-    el.ondragleave = () => el.classList.remove("dragover");
-    el.ondrop = e => {
-      e.preventDefault();
-      el.classList.remove("dragover");
-      handleDirectDrop(e.dataTransfer.files, folderId);
-    };
-  });
-
-  document.querySelectorAll("[data-delete]").forEach(el => {
-    el.onclick = () => deleteDoc(el.dataset.delete);
-  });
-
-  document.querySelectorAll("[data-edit]").forEach(el => {
-    el.onclick = () => editDoc(el.dataset.edit);
-  });
-
-  document.querySelectorAll("[data-remove-folder]").forEach(el => {
-    el.onclick = () => deleteFolder(el.dataset.removeFolder);
-  });
-
-  const create = $("createFolder");
-  if (create) create.onclick = addFolder;
-}
-
-// Zone de dépôt dans l'onglet Ajouter
-const dz = $("dropZone");
-const fi = $("fileInput");
-dz.onclick = () => fi.click();
-fi.onchange = () => {
-  pendingFile = fi.files[0] || null;
-  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name}` : "";
-};
-dz.ondragover = e => { e.preventDefault(); dz.classList.add("dragover"); };
-dz.ondragleave = () => dz.classList.remove("dragover");
-dz.ondrop = e => {
-  e.preventDefault();
-  dz.classList.remove("dragover");
-  pendingFile = e.dataTransfer.files[0] || null;
-  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name}` : "";
-};
-
-async function addFolder() {
-  if (!staff()) return;
-  const name = $("newFolder").value.trim();
-  if (!name) return say("Entre un nom de dossier.");
-  const { error } = await db.from("folders").insert({ name });
-  if (error) return say(error.message);
-  say("Dossier créé !");
-  await load();
-}
-
-async function deleteFolder(id) {
-  if (!staff() || !confirm("Supprimer ce dossier et ses documents ?")) return;
-  const { error } = await db.from("folders").delete().eq("id", id);
-  if (error) return say(error.message);
-  say("Dossier supprimé.");
-  await load();
-}
-
-async function addDoc() {
-  if (!canPublish()) return say("Connexion nécessaire.");
-  let title = $("title").value.trim();
-  const content = $("content").value.trim();
-  const folder_id = $("destination").value;
-
-  if (!folder_id) return say("Choisis un dossier.");
-  if (!title && !content && !pendingFile)
-    return say("Ajoute un titre, un texte ou un fichier.");
-
-  $("publish").disabled = true;
-  say("Publication en cours...");
-
-  try {
-    let file_url = null;
-    let file_name = null;
-
-    if (pendingFile) {
-      const uploaded = await uploadFile(pendingFile);
-      file_url = uploaded.url;
-      file_name = uploaded.name;
-      if (!title) title = pendingFile.name;
-    }
-
-    const { error } = await db.from("documents").insert({
-      title: title || "Sans titre",
-      content,
-      folder_id,
-      file_url,
-      file_name,
-      author_name: profile?.display_name || "Membre"
-    });
-
-    if (error) throw error;
-
-    $("title").value = "";
-    $("content").value = "";
-    pendingFile = null;
-    fi.value = "";
-    $("selectedFileName").textContent = "";
-    say("Ressource publiée !");
-    await load();
-    showTab("library");
-  } catch (err) {
-    say("Erreur : " + err.message);
-  } finally {
-    $("publish").disabled = false;
-  }
-}
-
-async function deleteDoc(id) {
-  if (!staff() || !confirm("Supprimer ce document ?")) return;
-  const { error } = await db.from("documents").delete().eq("id", id);
-  if (error) return say(error.message);
-  say("Document supprimé.");
-  await load();
-}
-
-async function editDoc(id) {
-  if (!staff()) return;
-  const d = docs.find(x => x.id === id);
-  if (!d) return;
-
-  const title = prompt("Nouveau titre :", d.title);
-  if (title === null) return;
-  const content = prompt("Nouveau contenu :", d.content || "");
-  if (content === null) return;
-
-  const { error } = await db.from("documents").update({
-    title: title.trim() || d.title, content
-  }).eq("id", id);
-
-  if (error) return say(error.message);
-  say("Document modifié.");
-  await load();
-}
-
-async function signup() {
-  const email = $("email").value.trim();
-  const password = $("password").value;
-  const display_name = $("displayName").value.trim() || "Membre";
-  if (!email || password.length < 8)
-    return say("Entre un e-mail et un mot de passe d'au moins 8 caractères.");
-
-  const { data, error } = await db.auth.signUp({
-    email, password,
-    options: { data: { display_name } }
-  });
-  if (error) return say(error.message);
-  if (!data.session)
-    return say("Compte créé ! Vérifie ta boîte e-mail pour confirmer ton inscription.");
-  await refreshUser();
-  say("Bienvenue sur ClassShare !");
-}
-
-async function login() {
-  const { error } = await db.auth.signInWithPassword({
-    email: $("email").value.trim(),
-    password: $("password").value
-  });
-  if (error) return say(error.message);
-  await refreshUser();
-  say("Connexion réussie !");
-}
-
-async function logout() {
-  await db.auth.signOut();
-  await refreshUser();
-  say("Déconnexion réussie.");
-}
-
-function showTab(tab) {
-  ["library", "add", "manage"].forEach(id => {
-    $(id).classList.toggle("hidden", id !== tab);
-  });
-}
-
-$("signup").onclick = signup;
-$("login").onclick = login;
-$("logout").onclick = logout;
-$("publish").onclick = addDoc;
-$("search").oninput = render;
-
-document.querySelectorAll("[data-tab]").forEach(el => {
-  el.onclick = () => showTab(el.dataset.tab);
-});
-
-db.auth.onAuthStateChange(() => {
-  setTimeout(() => refreshUser(), 0);
-});
-
-await refreshUser();
-</script>
-</body>
-</html>
