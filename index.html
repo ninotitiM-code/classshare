@@ -20,9 +20,10 @@ button:hover{opacity:.85}
 .folder.active{outline:2px solid #2563eb}
 .doc{padding:14px;border:1px solid #e2e8f0;border-radius:10px;margin:12px 0;white-space:pre-wrap}
 small{color:#64748b}
-nav{display:flex;gap:5px;flex-wrap:wrap}
+nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}
 .hidden{display:none!important}
 .status{padding:10px;background:#eff6ff;border-radius:8px;margin:10px 0}
+.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:bold;background:#dbeafe;color:#1e40af;margin-left:8px}
 </style>
 </head>
 <body>
@@ -50,8 +51,8 @@ nav{display:flex;gap:5px;flex-wrap:wrap}
 
 <nav>
 <button data-tab="library">📁 Dossiers</button>
-<button data-tab="add">➕ Ajouter</button>
-<button data-tab="manage">⚙️ Gestion</button>
+<button id="navAdd" data-tab="add" class="hidden">➕ Ajouter</button>
+<button id="navManage" data-tab="manage" class="hidden">⚙️ Gestion</button>
 </nav>
 
 <section id="library">
@@ -148,8 +149,23 @@ async function refreshUser() {
 function renderAccount() {
   $("account").classList.toggle("hidden", !!user);
   $("connected").classList.toggle("hidden", !user);
-  $("userInfo").textContent = user ?
-    (profile?.display_name || user.email) + " — " + (profile?.role || "membre") : "";
+
+  // Affichage des onglets selon le rôle exact
+  $("navAdd").classList.toggle("hidden", !canPublish());
+  $("navManage").classList.toggle("hidden", !staff());
+
+  // Si l'utilisateur n'a plus accès à l'onglet ouvert, retour à la bibliothèque
+  if (!canPublish() && !$("add").classList.contains("hidden")) showTab("library");
+  if (!staff() && !$("manage").classList.contains("hidden")) showTab("library");
+
+  if (user) {
+    const roleLabel = profile?.role === "admin" ? "Administrateur"
+      : profile?.role === "moderator" ? "Modérateur"
+      : "Membre";
+    $("userInfo").innerHTML = `Connecté en tant que <strong>${safe(profile?.display_name || user.email)}</strong> <span class="badge">${roleLabel}</span>`;
+  } else {
+    $("userInfo").textContent = "";
+  }
 }
 
 function render() {
@@ -187,8 +203,6 @@ function render() {
     ` : ""}
     </div>`).join("") : "<p>Aucun document trouvé.</p>";
 
-  $("publish").disabled = !canPublish();
-
   $("management").innerHTML = staff() ? `
     <h3>Créer un dossier</h3>
     <input id="newFolder" placeholder="Nom du dossier">
@@ -200,7 +214,7 @@ function render() {
     Supprimer
     </button></p>`).join("")}
     <p><small>La suppression d'un dossier supprime également ses documents.</small></p>
-    ` : "<p>Connecte-toi avec un compte autorisé pour gérer les dossiers.</p>";
+    ` : "";
 
   bindActions();
 }
