@@ -8,7 +8,7 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f1f5f9;color:#172033;font-family:Arial}
-header{background:#172554;color:white;padding:24px}
+header{background:#172554;color:white;padding:25px}
 header h1{margin:0}
 main{max-width:950px;margin:25px auto;padding:15px}
 section{background:white;padding:20px;border-radius:14px;margin-bottom:18px}
@@ -21,9 +21,9 @@ button:hover{opacity:.85}
 .folder.active{outline:2px solid #2563eb}
 .doc{padding:14px;border:1px solid #e2e8f0;border-radius:10px;margin:12px 0;white-space:pre-wrap}
 small{color:#64748b}
-.hidden{display:none}
-.tag{font-size:12px;background:#e0e7ff;padding:5px 8px;border-radius:15px}
 nav{display:flex;gap:5px;flex-wrap:wrap}
+.hidden{display:none!important}
+.status{padding:10px;background:#eff6ff;border-radius:8px;margin:10px 0}
 </style>
 </head>
 <body>
@@ -31,29 +31,34 @@ nav{display:flex;gap:5px;flex-wrap:wrap}
 <h1>📚 ClassShare</h1>
 <p>Le partage des connaissances.</p>
 </header>
-<main>
 
-<section>
-<h2>👤 Mon espace</h2>
-<select id="role" onchange="changeRole()">
-<option value="admin">Administrateur (démo)</option>
-<option value="mod">Modérateur (démo)</option>
-<option value="member">Membre (démo)</option>
-<option value="visitor">Visiteur (démo)</option>
-</select>
-<p id="roleInfo"></p>
+<main>
+<section id="auth">
+<h2>👤 Mon compte</h2>
+<div id="account">
+<input id="email" type="email" placeholder="Adresse e-mail">
+<input id="password" type="password" placeholder="Mot de passe">
+<input id="displayName" placeholder="Prénom ou pseudo (inscription)">
+<button id="signup">Créer un compte</button>
+<button id="login">Se connecter</button>
+</div>
+<div id="connected" class="hidden">
+<p id="userInfo"></p>
+<button id="logout" class="secondary">Se déconnecter</button>
+</div>
+<div id="message" class="status">Connecte-toi ou crée un compte pour contribuer.</div>
 </section>
 
 <nav>
-<button onclick="showTab('folders')">📁 Dossiers</button>
-<button onclick="showTab('add')">➕ Ajouter</button>
-<button onclick="showTab('admin')">⚙️ Administration</button>
+<button data-tab="library">📁 Dossiers</button>
+<button data-tab="add">➕ Ajouter</button>
+<button data-tab="manage">⚙️ Gestion</button>
 </nav>
 
-<section id="folders">
-<h2>📂 Mes dossiers</h2>
-<div id="folderList"></div>
-<input id="search" placeholder="🔎 Rechercher..." oninput="render()">
+<section id="library">
+<h2>📚 Bibliothèque</h2>
+<input id="search" placeholder="🔎 Rechercher un document...">
+<div id="folders"></div>
 <h3 id="folderTitle"></h3>
 <div id="documents"></div>
 </section>
@@ -62,153 +67,295 @@ nav{display:flex;gap:5px;flex-wrap:wrap}
 <h2>📝 Ajouter une ressource</h2>
 <select id="destination"></select>
 <input id="title" placeholder="Titre du document">
-<input id="author" placeholder="Ton prénom ou pseudo">
 <textarea id="content" rows="6" placeholder="Écris ta réponse, ton cours..."></textarea>
-<button onclick="addDoc()">Publier</button>
+<button id="publish">Publier immédiatement</button>
 </section>
 
-<section id="admin" class="hidden">
-<h2>⚙️ Administration</h2>
-<div id="adminContent"></div>
+<section id="manage" class="hidden">
+<h2>⚙️ Gestion des dossiers</h2>
+<div id="management"></div>
 </section>
-
 </main>
 
-<script>
-let folders=JSON.parse(localStorage.getItem("folders"))||
-["Mathématiques","Français","Histoire-Géo","Sciences"];
+<script type="module">
+import { createClient }
+from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-let docs=JSON.parse(localStorage.getItem("docs"))||[];
-let moderators=JSON.parse(localStorage.getItem("moderators"))||[];
-let selected=folders[0];
-let currentRole="admin";
+// REMPLACE CES DEUX VALEURS
+const SUPABASE_URL = "https://twzeosslphrqprfpcxxv.supabase.co/rest/v1/";
+const SUPABASE_KEY = "sb_publishable_uknnIKbDO6PvOQxoOHDKIA_3HAWkR6h";
 
-function save(){
-localStorage.setItem("folders",JSON.stringify(folders));
-localStorage.setItem("docs",JSON.stringify(docs));
-localStorage.setItem("moderators",JSON.stringify(moderators));
+const db = createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let user=null;
+let profile=null;
+let folders=[];
+let docs=[];
+let selected=null;
+
+const $ = id => document.getElementById(id);
+
+function safe(s){
+ return String(s??"").replace(/[&<>"']/g,c=>({
+ "&":"&amp;","<":"&lt;",">":"&gt;",
+ '"':"&quot;","'":"&#39;"
+ })[c]);
 }
 
-function canManage(){
-return currentRole==="admin"||currentRole==="mod";
+function say(msg){
+ $("message").textContent=msg;
 }
-function canAdd(){
-return currentRole!=="visitor";
+
+function staff(){
+ return ["admin","moderator"].includes(profile?.role);
 }
-function changeRole(){
-currentRole=document.getElementById("role").value;
-render();
+
+function canPublish(){
+ return !!user && ["admin","moderator","member"].includes(profile?.role);
 }
-function showTab(tab){
-document.querySelectorAll("main>section").forEach(s=>s.classList.add("hidden"));
-document.getElementById(tab).classList.remove("hidden");
-render();
+
+async function load(){
+ const {data:f,error:fe}=await db.from("folders")
+ .select("id,name").order("name");
+ if(fe){say("Erreur dossiers : "+fe.message);return;}
+ folders=f||[];
+
+ const {data:d,error:de}=await db.from("documents")
+ .select("id,title,content,author_name,folder_id,created_at")
+ .order("created_at",{ascending:false});
+ if(de){say("Erreur documents : "+de.message);return;}
+ docs=d||[];
+
+ if(!folders.some(f=>f.id===selected))
+ selected=folders[0]?.id||null;
+
+ render();
 }
-function addFolder(){
-if(!canManage())return alert("Accès refusé");
-let name=prompt("Nom du dossier :");
-if(!name||!name.trim())return;
-if(folders.includes(name.trim()))return alert("Ce dossier existe déjà.");
-folders.push(name.trim());
-selected=name.trim();
-save();render();
+
+async function refreshUser(){
+ const {data:{session}}=await db.auth.getSession();
+ user=session?.user||null;
+ profile=null;
+
+ if(user){
+ const {data,error}=await db.from("profiles")
+ .select("display_name,role").eq("id",user.id).single();
+ if(error){say("Profil : "+error.message);}
+ else profile=data;
+ }
+ renderAccount();
+ await load();
 }
-function deleteFolder(name){
-if(currentRole!=="admin")return alert("Seul l'administrateur peut supprimer un dossier.");
-if(!confirm("Supprimer ce dossier et tous ses documents ?"))return;
-folders=folders.filter(f=>f!==name);
-docs=docs.filter(d=>d.folder!==name);
-selected=folders[0]||"";
-save();render();
+
+function renderAccount(){
+ $("account").classList.toggle("hidden",!!user);
+ $("connected").classList.toggle("hidden",!user);
+ $("userInfo").textContent=user?
+ (profile?.display_name||user.email)+" — "+(profile?.role||"membre"):"";
 }
-function addDoc(){
-if(!canAdd())return alert("Accès refusé");
-let title=document.getElementById("title").value.trim();
-let content=document.getElementById("content").value.trim();
-let folder=document.getElementById("destination").value;
-let author=document.getElementById("author").value.trim()||"Anonyme";
-if(!title||!content)return alert("Complète le titre et le contenu.");
-docs.push({id:Date.now(),title,content,author,folder});
-document.getElementById("title").value="";
-document.getElementById("content").value="";
-save();render();showTab("folders");
-}
-function deleteDoc(id){
-if(!canManage())return alert("Accès refusé");
-if(!confirm("Supprimer ce document ?"))return;
-docs=docs.filter(d=>d.id!==id);
-save();render();
-}
-function editDoc(id){
-if(!canManage())return;
-let d=docs.find(x=>x.id===id);
-let title=prompt("Modifier le titre :",d.title);
-if(title===null)return;
-let content=prompt("Modifier le contenu :",d.content);
-if(content===null)return;
-d.title=title.trim()||d.title;
-d.content=content;
-save();render();
-}
-function addModerator(){
-if(currentRole!=="admin")return alert("Accès refusé");
-let name=prompt("Pseudo du nouveau modérateur :");
-if(!name||!name.trim())return;
-if(moderators.includes(name.trim()))return alert("Déjà présent.");
-moderators.push(name.trim());
-save();render();
-}
-function removeModerator(name){
-if(currentRole!=="admin")return;
-if(!confirm("Retirer ce modérateur ?"))return;
-moderators=moderators.filter(x=>x!==name);
-save();render();
-}
-function escapeHTML(s){
-return String(s).replace(/[&<>"']/g,c=>({
-"&":"&amp;","<":"&lt;",">":"&gt;",
-'"':"&quot;","'":"&#39;"
-})[c]);
-}
+
 function render(){
-document.getElementById("roleInfo").textContent=
-"Rôle actuel : "+({admin:"Administrateur",mod:"Modérateur",member:"Membre",visitor:"Visiteur"}[currentRole]);
+ $("folders").innerHTML=folders.map(f=>
+ `<div class="folder ${f.id===selected?"active":""}"
+ data-folder="${f.id}">📁 ${safe(f.name)}</div>`
+ ).join("");
 
-document.getElementById("folderList").innerHTML=
-folders.map(f=>`<div class="folder ${f===selected?"active":""}" onclick="selected=${JSON.stringify(f)};render()">📁 ${escapeHTML(f)}</div>`).join("")+
-(canManage()?'<button onclick="addFolder()">+ Dossier</button>':"");
+ $("folderTitle").textContent=
+ folders.find(f=>f.id===selected)?.name||"Aucun dossier";
 
-let select=document.getElementById("destination");
-select.innerHTML=folders.map(f=>`<option>${escapeHTML(f)}</option>`).join("");
-select.value=selected;
+ $("destination").innerHTML=folders.map(f=>
+ `<option value="${f.id}">${safe(f.name)}</option>`
+ ).join("");
 
-document.getElementById("folderTitle").textContent=selected||"Aucun dossier";
+ if(selected)$("destination").value=selected;
 
-let query=document.getElementById("search").value.toLowerCase();
-let filtered=docs.filter(d=>d.folder===selected&&
-(d.title+" "+d.content+" "+d.author).toLowerCase().includes(query));
+ const q=$("search").value.toLowerCase();
 
-document.getElementById("documents").innerHTML=
-filtered.length?filtered.map(d=>`
-<div class="doc">
-<strong>${escapeHTML(d.title)}</strong><br>
-<small>Par ${escapeHTML(d.author)}</small>
-<p>${escapeHTML(d.content)}</p>
-${canManage()?`
-<button onclick="editDoc(${d.id})">✏️ Modifier</button>
-<button class="danger" onclick="deleteDoc(${d.id})">🗑️ Supprimer</button>`:""}
-</div>`).join(""):"<p>Aucun document trouvé.</p>";
+ const filtered=docs.filter(d=>
+ d.folder_id===selected &&
+ (d.title+" "+d.content+" "+d.author_name)
+ .toLowerCase().includes(q)
+ );
 
-document.getElementById("add").querySelector("button").disabled=!canAdd();
-document.getElementById("adminContent").innerHTML=
-currentRole==="admin"?`
-<h3>👑 Gestion des modérateurs</h3>
-<button onclick="addModerator()">+ Nommer un modérateur</button>
-${moderators.map(m=>`<p>${escapeHTML(m)} <button class="danger" onclick="removeModerator(${JSON.stringify(m)})">Retirer</button></p>`).join("")}
-<p><small>Les rôles sont simulés sur cet appareil dans cette version.</small></p>
-`:"<p>Accès réservé à l'administrateur.</p>";
+ $("documents").innerHTML=filtered.length?
+ filtered.map(d=>`
+ <div class="doc">
+ <strong>${safe(d.title)}</strong><br>
+ <small>Par ${safe(d.author_name)}</small>
+ <p>${safe(d.content)}</p>
+ ${staff()?`
+ <button data-edit="${d.id}">✏️ Modifier</button>
+ <button class="danger" data-delete="${d.id}">🗑️ Supprimer</button>
+ `:""}
+ </div>`).join(""):"<p>Aucun document trouvé.</p>";
+
+ $("publish").disabled=!canPublish();
+ $("add").classList.toggle("hidden",
+ $("add").classList.contains("hidden")||!canPublish());
+
+ $("management").innerHTML=staff()?`
+ <h3>Créer un dossier</h3>
+ <input id="newFolder" placeholder="Nom du dossier">
+ <button id="createFolder">+ Créer</button>
+ <h3>Supprimer un dossier</h3>
+ ${folders.map(f=>`
+ <p>📁 ${safe(f.name)}
+ <button class="danger" data-remove-folder="${f.id}">
+ Supprimer
+ </button></p>`).join("")}
+ <p><small>La suppression d'un dossier supprime également ses documents.</small></p>
+ `:"<p>Connecte-toi avec un compte autorisé pour gérer les dossiers.</p>";
+
+ bindActions();
 }
-render();
+
+function bindActions(){
+ document.querySelectorAll("[data-folder]").forEach(el=>{
+ el.onclick=()=>{
+ selected=el.dataset.folder;
+ render();
+ };
+ });
+
+ document.querySelectorAll("[data-delete]").forEach(el=>{
+ el.onclick=()=>deleteDoc(el.dataset.delete);
+ });
+
+ document.querySelectorAll("[data-edit]").forEach(el=>{
+ el.onclick=()=>editDoc(el.dataset.edit);
+ });
+
+ document.querySelectorAll("[data-remove-folder]").forEach(el=>{
+ el.onclick=()=>deleteFolder(el.dataset.removeFolder);
+ });
+
+ const create=$("createFolder");
+ if(create)create.onclick=addFolder;
+}
+
+async function addFolder(){
+ if(!staff())return;
+ const name=$("newFolder").value.trim();
+ if(!name)return say("Entre un nom de dossier.");
+ const {error}=await db.from("folders").insert({name});
+ if(error)return say(error.message);
+ say("Dossier créé !");
+ await load();
+}
+
+async function deleteFolder(id){
+ if(!staff()||!confirm("Supprimer ce dossier et ses documents ?"))return;
+ const {error}=await db.from("folders").delete().eq("id",id);
+ if(error)return say(error.message);
+ say("Dossier supprimé.");
+ await load();
+}
+
+async function addDoc(){
+ if(!canPublish())return say("Connexion nécessaire.");
+ const title=$("title").value.trim();
+ const content=$("content").value.trim();
+ const folder_id=$("destination").value;
+
+ if(!title||!content||!folder_id)
+ return say("Complète tous les champs.");
+
+ const {error}=await db.from("documents").insert({
+ title,content,folder_id,
+ author_name:profile?.display_name||"Membre"
+ });
+
+ if(error)return say(error.message);
+
+ $("title").value="";
+ $("content").value="";
+ say("Document publié !");
+ await load();
+ showTab("library");
+}
+
+async function deleteDoc(id){
+ if(!staff()||!confirm("Supprimer ce document ?"))return;
+ const {error}=await db.from("documents").delete().eq("id",id);
+ if(error)return say(error.message);
+ say("Document supprimé.");
+ await load();
+}
+
+async function editDoc(id){
+ if(!staff())return;
+ const d=docs.find(x=>x.id===id);
+ if(!d)return;
+
+ const title=prompt("Nouveau titre :",d.title);
+ if(title===null)return;
+ const content=prompt("Nouveau contenu :",d.content);
+ if(content===null)return;
+
+ const {error}=await db.from("documents").update({
+ title:title.trim()||d.title,content
+ }).eq("id",id);
+
+ if(error)return say(error.message);
+ say("Document modifié.");
+ await load();
+}
+
+async function signup(){
+ const email=$("email").value.trim();
+ const password=$("password").value;
+ const display_name=$("displayName").value.trim()||"Membre";
+ if(!email||password.length<8)
+ return say("Entre un e-mail et un mot de passe d'au moins 8 caractères.");
+
+ const {data,error}=await db.auth.signUp({
+ email,password,
+ options:{data:{display_name}}
+ });
+ if(error)return say(error.message);
+ if(!data.session)
+ return say("Compte créé ! Vérifie ta boîte e-mail pour confirmer ton inscription.");
+ await refreshUser();
+ say("Bienvenue sur ClassShare !");
+}
+
+async function login(){
+ const {error}=await db.auth.signInWithPassword({
+ email:$("email").value.trim(),
+ password:$("password").value
+ });
+ if(error)return say(error.message);
+ await refreshUser();
+ say("Connexion réussie !");
+}
+
+async function logout(){
+ await db.auth.signOut();
+ await refreshUser();
+ say("Déconnexion réussie.");
+}
+
+function showTab(tab){
+ ["library","add","manage"].forEach(id=>{
+ $(id).classList.toggle("hidden",id!==tab);
+ });
+}
+
+$("signup").onclick=signup;
+$("login").onclick=login;
+$("logout").onclick=logout;
+$("publish").onclick=addDoc;
+$("search").oninput=render;
+
+document.querySelectorAll("[data-tab]").forEach(el=>{
+ el.onclick=()=>showTab(el.dataset.tab);
+});
+
+db.auth.onAuthStateChange(()=>{
+ setTimeout(()=>refreshUser(),0);
+});
+
+await refreshUser();
 </script>
 </body>
 </html>
