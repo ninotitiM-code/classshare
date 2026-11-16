@@ -1,0 +1,214 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClassShare</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f1f5f9;color:#172033;font-family:Arial}
+header{background:#172554;color:white;padding:24px}
+header h1{margin:0}
+main{max-width:950px;margin:25px auto;padding:15px}
+section{background:white;padding:20px;border-radius:14px;margin-bottom:18px}
+input,textarea,select{width:100%;padding:12px;margin:7px 0;border:1px solid #dce1eb;border-radius:8px;font:inherit}
+button{background:#2563eb;color:white;border:0;padding:11px 15px;border-radius:8px;cursor:pointer;margin:4px}
+button:hover{opacity:.85}
+.danger{background:#dc2626}
+.secondary{background:#64748b}
+.folder{display:inline-block;background:#eff6ff;padding:13px;margin:5px;border-radius:10px;cursor:pointer}
+.folder.active{outline:2px solid #2563eb}
+.doc{padding:14px;border:1px solid #e2e8f0;border-radius:10px;margin:12px 0;white-space:pre-wrap}
+small{color:#64748b}
+.hidden{display:none}
+.tag{font-size:12px;background:#e0e7ff;padding:5px 8px;border-radius:15px}
+nav{display:flex;gap:5px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header>
+<h1>📚 ClassShare</h1>
+<p>Le partage des connaissances.</p>
+</header>
+<main>
+
+<section>
+<h2>👤 Mon espace</h2>
+<select id="role" onchange="changeRole()">
+<option value="admin">Administrateur (démo)</option>
+<option value="mod">Modérateur (démo)</option>
+<option value="member">Membre (démo)</option>
+<option value="visitor">Visiteur (démo)</option>
+</select>
+<p id="roleInfo"></p>
+</section>
+
+<nav>
+<button onclick="showTab('folders')">📁 Dossiers</button>
+<button onclick="showTab('add')">➕ Ajouter</button>
+<button onclick="showTab('admin')">⚙️ Administration</button>
+</nav>
+
+<section id="folders">
+<h2>📂 Mes dossiers</h2>
+<div id="folderList"></div>
+<input id="search" placeholder="🔎 Rechercher..." oninput="render()">
+<h3 id="folderTitle"></h3>
+<div id="documents"></div>
+</section>
+
+<section id="add" class="hidden">
+<h2>📝 Ajouter une ressource</h2>
+<select id="destination"></select>
+<input id="title" placeholder="Titre du document">
+<input id="author" placeholder="Ton prénom ou pseudo">
+<textarea id="content" rows="6" placeholder="Écris ta réponse, ton cours..."></textarea>
+<button onclick="addDoc()">Publier</button>
+</section>
+
+<section id="admin" class="hidden">
+<h2>⚙️ Administration</h2>
+<div id="adminContent"></div>
+</section>
+
+</main>
+
+<script>
+let folders=JSON.parse(localStorage.getItem("folders"))||
+["Mathématiques","Français","Histoire-Géo","Sciences"];
+
+let docs=JSON.parse(localStorage.getItem("docs"))||[];
+let moderators=JSON.parse(localStorage.getItem("moderators"))||[];
+let selected=folders[0];
+let currentRole="admin";
+
+function save(){
+localStorage.setItem("folders",JSON.stringify(folders));
+localStorage.setItem("docs",JSON.stringify(docs));
+localStorage.setItem("moderators",JSON.stringify(moderators));
+}
+
+function canManage(){
+return currentRole==="admin"||currentRole==="mod";
+}
+function canAdd(){
+return currentRole!=="visitor";
+}
+function changeRole(){
+currentRole=document.getElementById("role").value;
+render();
+}
+function showTab(tab){
+document.querySelectorAll("main>section").forEach(s=>s.classList.add("hidden"));
+document.getElementById(tab).classList.remove("hidden");
+render();
+}
+function addFolder(){
+if(!canManage())return alert("Accès refusé");
+let name=prompt("Nom du dossier :");
+if(!name||!name.trim())return;
+if(folders.includes(name.trim()))return alert("Ce dossier existe déjà.");
+folders.push(name.trim());
+selected=name.trim();
+save();render();
+}
+function deleteFolder(name){
+if(currentRole!=="admin")return alert("Seul l'administrateur peut supprimer un dossier.");
+if(!confirm("Supprimer ce dossier et tous ses documents ?"))return;
+folders=folders.filter(f=>f!==name);
+docs=docs.filter(d=>d.folder!==name);
+selected=folders[0]||"";
+save();render();
+}
+function addDoc(){
+if(!canAdd())return alert("Accès refusé");
+let title=document.getElementById("title").value.trim();
+let content=document.getElementById("content").value.trim();
+let folder=document.getElementById("destination").value;
+let author=document.getElementById("author").value.trim()||"Anonyme";
+if(!title||!content)return alert("Complète le titre et le contenu.");
+docs.push({id:Date.now(),title,content,author,folder});
+document.getElementById("title").value="";
+document.getElementById("content").value="";
+save();render();showTab("folders");
+}
+function deleteDoc(id){
+if(!canManage())return alert("Accès refusé");
+if(!confirm("Supprimer ce document ?"))return;
+docs=docs.filter(d=>d.id!==id);
+save();render();
+}
+function editDoc(id){
+if(!canManage())return;
+let d=docs.find(x=>x.id===id);
+let title=prompt("Modifier le titre :",d.title);
+if(title===null)return;
+let content=prompt("Modifier le contenu :",d.content);
+if(content===null)return;
+d.title=title.trim()||d.title;
+d.content=content;
+save();render();
+}
+function addModerator(){
+if(currentRole!=="admin")return alert("Accès refusé");
+let name=prompt("Pseudo du nouveau modérateur :");
+if(!name||!name.trim())return;
+if(moderators.includes(name.trim()))return alert("Déjà présent.");
+moderators.push(name.trim());
+save();render();
+}
+function removeModerator(name){
+if(currentRole!=="admin")return;
+if(!confirm("Retirer ce modérateur ?"))return;
+moderators=moderators.filter(x=>x!==name);
+save();render();
+}
+function escapeHTML(s){
+return String(s).replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",
+'"':"&quot;","'":"&#39;"
+})[c]);
+}
+function render(){
+document.getElementById("roleInfo").textContent=
+"Rôle actuel : "+({admin:"Administrateur",mod:"Modérateur",member:"Membre",visitor:"Visiteur"}[currentRole]);
+
+document.getElementById("folderList").innerHTML=
+folders.map(f=>`<div class="folder ${f===selected?"active":""}" onclick="selected=${JSON.stringify(f)};render()">📁 ${escapeHTML(f)}</div>`).join("")+
+(canManage()?'<button onclick="addFolder()">+ Dossier</button>':"");
+
+let select=document.getElementById("destination");
+select.innerHTML=folders.map(f=>`<option>${escapeHTML(f)}</option>`).join("");
+select.value=selected;
+
+document.getElementById("folderTitle").textContent=selected||"Aucun dossier";
+
+let query=document.getElementById("search").value.toLowerCase();
+let filtered=docs.filter(d=>d.folder===selected&&
+(d.title+" "+d.content+" "+d.author).toLowerCase().includes(query));
+
+document.getElementById("documents").innerHTML=
+filtered.length?filtered.map(d=>`
+<div class="doc">
+<strong>${escapeHTML(d.title)}</strong><br>
+<small>Par ${escapeHTML(d.author)}</small>
+<p>${escapeHTML(d.content)}</p>
+${canManage()?`
+<button onclick="editDoc(${d.id})">✏️ Modifier</button>
+<button class="danger" onclick="deleteDoc(${d.id})">🗑️ Supprimer</button>`:""}
+</div>`).join(""):"<p>Aucun document trouvé.</p>";
+
+document.getElementById("add").querySelector("button").disabled=!canAdd();
+document.getElementById("adminContent").innerHTML=
+currentRole==="admin"?`
+<h3>👑 Gestion des modérateurs</h3>
+<button onclick="addModerator()">+ Nommer un modérateur</button>
+${moderators.map(m=>`<p>${escapeHTML(m)} <button class="danger" onclick="removeModerator(${JSON.stringify(m)})">Retirer</button></p>`).join("")}
+<p><small>Les rôles sont simulés sur cet appareil dans cette version.</small></p>
+`:"<p>Accès réservé à l'administrateur.</p>";
+}
+render();
+</script>
+</body>
+</html>
