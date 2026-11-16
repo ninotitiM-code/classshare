@@ -16,9 +16,14 @@ button{background:#2563eb;color:white;border:0;padding:11px 15px;border-radius:8
 button:hover{opacity:.85}
 .danger{background:#dc2626}
 .secondary{background:#64748b}
-.folder{display:inline-block;background:#eff6ff;padding:13px;margin:5px;border-radius:10px;cursor:pointer}
-.folder.active{outline:2px solid #2563eb}
+.folder{display:inline-block;background:#eff6ff;padding:13px 16px;margin:5px;border-radius:10px;cursor:pointer;border:2px dashed transparent;transition:.15s}
+.folder.active{outline:2px solid #2563eb;background:#dbeafe}
+.folder.dragover{border-color:#2563eb;background:#bfdbfe;transform:scale(1.04)}
+.dropzone{border:2px dashed #93c5fd;background:#f8fafc;padding:25px;text-align:center;border-radius:12px;margin:10px 0;cursor:pointer;color:#475569;transition:.15s}
+.dropzone.dragover{border-color:#2563eb;background:#eff6ff;color:#1e40af}
 .doc{padding:14px;border:1px solid #e2e8f0;border-radius:10px;margin:12px 0;white-space:pre-wrap}
+.file-link{display:inline-block;margin-top:8px;padding:8px 12px;background:#eff6ff;color:#1d4ed8;text-decoration:none;border-radius:8px;font-weight:bold;font-size:14px}
+.file-link:hover{background:#dbeafe}
 small{color:#64748b}
 nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}
 .hidden{display:none!important}
@@ -57,7 +62,8 @@ nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}
 
 <section id="library">
 <h2>📚 Bibliothèque</h2>
-<input id="search" placeholder="🔎 Rechercher un document...">
+<input id="search" placeholder="🔎 Rechercher un document ou un fichier...">
+<p id="dropHint" class="hidden"><small>💡 Astuce : Glisse directement un fichier depuis ton ordinateur sur un dossier ci-dessous pour l'ajouter instantanément.</small></p>
 <div id="folders"></div>
 <h3 id="folderTitle"></h3>
 <div id="documents"></div>
@@ -66,8 +72,13 @@ nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:15px}
 <section id="add" class="hidden">
 <h2>📝 Ajouter une ressource</h2>
 <select id="destination"></select>
-<input id="title" placeholder="Titre du document">
-<textarea id="content" rows="6" placeholder="Écris ta réponse, ton cours..."></textarea>
+<input id="title" placeholder="Titre du document (optionnel si tu ajoutes un fichier)">
+<textarea id="content" rows="4" placeholder="Note ou description (optionnel si tu ajoutes un fichier)..."></textarea>
+<div id="dropZone" class="dropzone">
+  📎 Glisse un fichier ici ou <strong>clique pour parcourir</strong>
+  <input id="fileInput" type="file" class="hidden">
+  <div id="selectedFileName" style="margin-top:8px;font-weight:bold;color:#2563eb"></div>
+</div>
 <button id="publish">Publier immédiatement</button>
 </section>
 
@@ -83,6 +94,7 @@ from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const SUPABASE_URL = "https://twzeosslphrqprfpcxxv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_uknnIKbDO6PvOQxoOHDKIA_3HAWkR6h";
+const BUCKET = "classshare-files";
 
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -91,6 +103,7 @@ let profile = null;
 let folders = [];
 let docs = [];
 let selected = null;
+let pendingFile = null;
 
 const $ = id => document.getElementById(id);
 
@@ -113,6 +126,44 @@ function canPublish() {
   return !!user && ["admin", "moderator", "member"].includes(profile?.role);
 }
 
+async function uploadFile(file) {
+  const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${user.id}/${Date.now()}_${cleanName}`;
+  const { error } = await db.storage.from(BUCKET).upload(path, file);
+  if (error) throw error;
+  const { data } = db.storage.from(BUCKET).getPublicUrl(path);
+  return { url: data.publicUrl, name: file.name };
+}
+
+async function handleDirectDrop(files, folderId) {
+  if (!canPublish()) return say("Connecte-toi pour déposer un fichier.");
+  if (!files || !files.length) return;
+
+  const folderName = folders.find(f => f.id === folderId)?.name || "ce dossier";
+  say(`Envoi de ${files.length} fichier(s) vers "${folderName}"...`);
+
+  for (const file of files) {
+    try {
+      const uploaded = await uploadFile(file);
+      const { error } = await db.from("documents").insert({
+        title: file.name,
+        content: "",
+        folder_id: folderId,
+        file_url: uploaded.url,
+        file_name: uploaded.name,
+        author_name: profile?.display_name || "Membre"
+      });
+      if (error) throw error;
+    } catch (err) {
+      return say("Erreur d'envoi : " + err.message);
+    }
+  }
+
+  selected = folderId;
+  say(`✅ ${files.length} fichier(s) ajouté(s) dans "${folderName}" !`);
+  await load();
+}
+
 async function load() {
   const { data: f, error: fe } = await db.from("folders")
     .select("id,name").order("name");
@@ -120,7 +171,7 @@ async function load() {
   folders = f || [];
 
   const { data: d, error: de } = await db.from("documents")
-    .select("id,title,content,author_name,folder_id,created_at")
+    .select("id,title,content,author_name,folder_id,file_url,file_name,created_at")
     .order("created_at", { ascending: false });
   if (de) { say("Erreur documents : " + de.message); return; }
   docs = d || [];
@@ -149,12 +200,10 @@ async function refreshUser() {
 function renderAccount() {
   $("account").classList.toggle("hidden", !!user);
   $("connected").classList.toggle("hidden", !user);
-
-  // Affichage des onglets selon le rôle exact
   $("navAdd").classList.toggle("hidden", !canPublish());
   $("navManage").classList.toggle("hidden", !staff());
+  $("dropHint").classList.toggle("hidden", !canPublish());
 
-  // Si l'utilisateur n'a plus accès à l'onglet ouvert, retour à la bibliothèque
   if (!canPublish() && !$("add").classList.contains("hidden")) showTab("library");
   if (!staff() && !$("manage").classList.contains("hidden")) showTab("library");
 
@@ -187,7 +236,7 @@ function render() {
 
   const filtered = docs.filter(d =>
     d.folder_id === selected &&
-    (d.title + " " + d.content + " " + d.author_name)
+    (d.title + " " + (d.content || "") + " " + (d.file_name || "") + " " + d.author_name)
       .toLowerCase().includes(q)
   );
 
@@ -196,10 +245,13 @@ function render() {
     <div class="doc">
     <strong>${safe(d.title)}</strong><br>
     <small>Par ${safe(d.author_name)}</small>
-    <p>${safe(d.content)}</p>
+    ${d.content ? `<p>${safe(d.content)}</p>` : ""}
+    ${d.file_url ? `<br><a class="file-link" href="${safe(d.file_url)}" target="_blank" rel="noopener">📎 Télécharger : ${safe(d.file_name || "Fichier")}</a>` : ""}
     ${staff() ? `
-    <button data-edit="${d.id}">✏️ Modifier</button>
-    <button class="danger" data-delete="${d.id}">🗑️ Supprimer</button>
+    <div style="margin-top:8px">
+      <button data-edit="${d.id}">✏️ Modifier</button>
+      <button class="danger" data-delete="${d.id}">🗑️ Supprimer</button>
+    </div>
     ` : ""}
     </div>`).join("") : "<p>Aucun document trouvé.</p>";
 
@@ -221,9 +273,21 @@ function render() {
 
 function bindActions() {
   document.querySelectorAll("[data-folder]").forEach(el => {
+    const folderId = el.dataset.folder;
     el.onclick = () => {
-      selected = el.dataset.folder;
+      selected = folderId;
       render();
+    };
+    // Glisser-déposer direct sur chaque dossier
+    el.ondragover = e => {
+      e.preventDefault();
+      if (canPublish()) el.classList.add("dragover");
+    };
+    el.ondragleave = () => el.classList.remove("dragover");
+    el.ondrop = e => {
+      e.preventDefault();
+      el.classList.remove("dragover");
+      handleDirectDrop(e.dataTransfer.files, folderId);
     };
   });
 
@@ -242,6 +306,23 @@ function bindActions() {
   const create = $("createFolder");
   if (create) create.onclick = addFolder;
 }
+
+// Zone de dépôt dans l'onglet Ajouter
+const dz = $("dropZone");
+const fi = $("fileInput");
+dz.onclick = () => fi.click();
+fi.onchange = () => {
+  pendingFile = fi.files[0] || null;
+  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name}` : "";
+};
+dz.ondragover = e => { e.preventDefault(); dz.classList.add("dragover"); };
+dz.ondragleave = () => dz.classList.remove("dragover");
+dz.ondrop = e => {
+  e.preventDefault();
+  dz.classList.remove("dragover");
+  pendingFile = e.dataTransfer.files[0] || null;
+  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name}` : "";
+};
 
 async function addFolder() {
   if (!staff()) return;
@@ -263,25 +344,52 @@ async function deleteFolder(id) {
 
 async function addDoc() {
   if (!canPublish()) return say("Connexion nécessaire.");
-  const title = $("title").value.trim();
+  let title = $("title").value.trim();
   const content = $("content").value.trim();
   const folder_id = $("destination").value;
 
-  if (!title || !content || !folder_id)
-    return say("Complète tous les champs.");
+  if (!folder_id) return say("Choisis un dossier.");
+  if (!title && !content && !pendingFile)
+    return say("Ajoute un titre, un texte ou un fichier.");
 
-  const { error } = await db.from("documents").insert({
-    title, content, folder_id,
-    author_name: profile?.display_name || "Membre"
-  });
+  $("publish").disabled = true;
+  say("Publication en cours...");
 
-  if (error) return say(error.message);
+  try {
+    let file_url = null;
+    let file_name = null;
 
-  $("title").value = "";
-  $("content").value = "";
-  say("Document publié !");
-  await load();
-  showTab("library");
+    if (pendingFile) {
+      const uploaded = await uploadFile(pendingFile);
+      file_url = uploaded.url;
+      file_name = uploaded.name;
+      if (!title) title = pendingFile.name;
+    }
+
+    const { error } = await db.from("documents").insert({
+      title: title || "Sans titre",
+      content,
+      folder_id,
+      file_url,
+      file_name,
+      author_name: profile?.display_name || "Membre"
+    });
+
+    if (error) throw error;
+
+    $("title").value = "";
+    $("content").value = "";
+    pendingFile = null;
+    fi.value = "";
+    $("selectedFileName").textContent = "";
+    say("Ressource publiée !");
+    await load();
+    showTab("library");
+  } catch (err) {
+    say("Erreur : " + err.message);
+  } finally {
+    $("publish").disabled = false;
+  }
 }
 
 async function deleteDoc(id) {
@@ -299,7 +407,7 @@ async function editDoc(id) {
 
   const title = prompt("Nouveau titre :", d.title);
   if (title === null) return;
-  const content = prompt("Nouveau contenu :", d.content);
+  const content = prompt("Nouveau contenu :", d.content || "");
   if (content === null) return;
 
   const { error } = await db.from("documents").update({
