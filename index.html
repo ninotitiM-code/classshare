@@ -323,7 +323,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
     <span class="side-left">👤 <span>Mon profil & classe</span></span>
   </div>
   <div id="navAdmin" class="side-item hidden" data-view="admin">
-    <span class="side-left">⚙️ <span>Administration</span></span>
+    <span class="side-left" id="adminNavLabel">⚙️ <span>Modération & Admin</span></span>
   </div>
 
   <div class="nav-label" style="margin-top:10px">Dossiers partagés</div>
@@ -434,12 +434,12 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       <div id="memberContent"></div>
     </div>
 
-    <!-- VUE 4 : ADMINISTRATION -->
+    <!-- VUE 4 : ADMINISTRATION & MODÉRATION -->
     <div id="viewAdmin" class="hidden">
       <div class="page-header">
         <div>
-          <h2 class="page-title">Administration</h2>
-          <p class="page-sub">Configuration des dossiers, des rôles et de la plateforme</p>
+          <h2 class="page-title">Espace Modération & Administration</h2>
+          <p class="page-sub">Gère l'ensemble des contenus, des dossiers et des rôles de la plateforme</p>
         </div>
         <button class="sec-btn" data-back>← Retour</button>
       </div>
@@ -755,6 +755,35 @@ async function load() {
   if (fe) return say("Erreur dossiers : " + fe.message);
   folders = f || [];
 
+  // Insertion de contenu de démonstration si aucun dossier ou document n'existe
+  if (!folders.length && staff()) {
+    const { data: newF } = await db.from("folders").insert([
+      { name: "Mathématiques", tag: "Cours" },
+      { name: "NSI & Informatique", tag: "Projet" },
+      { name: "Physique-Chimie", tag: "Exercices" }
+    ]).select();
+    if (newF && newF.length) {
+      await db.from("documents").insert([
+        {
+          title: "Introduction aux Suites Numériques",
+          content: "Rappel sur les suites arithmétiques et géométriques. Formule explicite et récurrente.\n\n• u(n) = u(0) + n*r\n• u(n) = u(0) * q^n",
+          folder_id: newF[0].id,
+          author_name: "Prof. Martin",
+          author_class: "Terminale S"
+        },
+        {
+          title: "Algorithme de Dijkstra en Python",
+          content: "Voici le code source commenté pour trouver le plus court chemin dans un graphe pondéré :\n\ndef dijkstra(graph, start):\n    # Implémentation de la file de priorité\n    pass",
+          folder_id: newF[1].id,
+          author_name: "Alex",
+          author_class: "Terminale NSI"
+        }
+      ]);
+    }
+    const { data: f2 } = await db.from("folders").select("*").order("name");
+    folders = f2 || [];
+  }
+
   const { data: d, error: de } = await db.from("documents")
     .select("id,title,content,author_id,author_name,author_class,folder_id,file_url,file_name,file_size,file_size_bytes,created_at")
     .order("created_at", { ascending: false });
@@ -835,6 +864,7 @@ function render() {
   $("navFavs").classList.toggle("active", activeView === "favs");
   $("navMember").classList.toggle("active", activeView === "member");
   $("navAdmin").classList.toggle("active", activeView === "admin");
+  $("adminNavLabel").innerHTML = `⚙️ <span>${isAdmin() ? "Administration" : "Modération"}</span>`;
 
   $("sidebarFolders").innerHTML = folders.map(f => {
     const count = docs.filter(d => d.folder_id === f.id).length;
@@ -976,6 +1006,24 @@ function render() {
 
   if (staff()) {
     $("management").innerHTML = `
+      <div class="panel-card">
+        <h3>🛡️ Panneau de Modération Rapide (${docs.length} ressources en ligne)</h3>
+        <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">En tant que modérateur/administrateur, tu peux nettoyer ou supprimer instantanément tout contenu inapproprié.</p>
+        <div style="max-height:300px;overflow-y:auto">
+          ${docs.map(d => {
+            const folderName = folders.find(f => f.id === d.folder_id)?.name || "Dossier";
+            return `
+            <div class="list-row">
+              <div>
+                <strong>${safe(d.title)}</strong><br>
+                <small>Par <em>${safe(d.author_name || "Inconnu")}</em> (${safe(d.author_class || "Sans classe")}) dans 📁 <strong>${safe(folderName)}</strong></small>
+              </div>
+              <button class="mini-btn del" data-delete="${d.id}">🗑️ Supprimer</button>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+
       <div class="panel-card">
         <h3>📁 Gestion des dossiers & Catégories (${folders.length})</h3>
         <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
@@ -1252,7 +1300,7 @@ async function addDoc() {
 
 async function deleteDoc(id) {
   const doc = docs.find(x => x.id === id);
-  if (!doc || !canManageDoc(doc) || !confirm("Supprimer cette ressource ?")) return;
+  if (!doc || (!staff() && doc.author_id !== user?.id) || !confirm("Supprimer cette ressource ?")) return;
   const { error } = await db.from("documents").delete().eq("id", id);
   if (error) return say("❌ " + error.message);
   say("🗑️ Ressource supprimée");
