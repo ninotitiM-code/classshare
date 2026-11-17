@@ -21,7 +21,7 @@
   --radius:12px;
   --font:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
   --shadow:0 1px 3px rgba(15,23,42,.04), 0 1px 2px rgba(15,23,42,.02);
-  --shadow-hover:0 10px 25px -5px rgba(15,23,42,.08), 0 8px 10px -6px rgba(15,23,42,.04);
+  --shadow-hover:0 12px 28px -6px rgba(15,23,42,.1), 0 8px 10px -6px rgba(15,23,42,.04);
 }
 
 body.theme-emerald{--primary:#059669;--primary-hover:#047857;--primary-soft:#ecfdf5}
@@ -37,15 +37,15 @@ body.dark{
   --text:#f8fafc;
   --muted:#94a3b8;
   --border:#1e293b;
-  --primary-soft:rgba(37,99,235,.16);
+  --primary-soft:rgba(37,99,235,.18);
   --shadow:0 1px 3px rgba(0,0,0,.4);
-  --shadow-hover:0 12px 28px -6px rgba(0,0,0,.6);
+  --shadow-hover:0 14px 30px -6px rgba(0,0,0,.6);
 }
-body.dark.theme-emerald{--primary-soft:rgba(5,150,105,.18)}
-body.dark.theme-purple{--primary-soft:rgba(124,58,237,.18)}
-body.dark.theme-coral{--primary-soft:rgba(234,88,12,.18)}
-body.dark.theme-pink{--primary-soft:rgba(219,39,119,.18)}
-body.dark.theme-cyan{--primary-soft:rgba(8,145,178,.18)}
+body.dark.theme-emerald{--primary-soft:rgba(5,150,105,.2)}
+body.dark.theme-purple{--primary-soft:rgba(124,58,237,.2)}
+body.dark.theme-coral{--primary-soft:rgba(234,88,12,.2)}
+body.dark.theme-pink{--primary-soft:rgba(219,39,119,.2)}
+body.dark.theme-cyan{--primary-soft:rgba(8,145,178,.2)}
 
 body.style-rounded{--radius:20px}
 body.style-compact{--radius:6px}
@@ -125,7 +125,8 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);lin
 body.dark .side-item.active{color:#93c5fd}
 .side-item.dragover{border:2px dashed var(--primary);background:var(--primary-soft);transform:scale(1.02)}
 .side-left{display:flex;align-items:center;gap:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.folder-tag-badge{font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:4px;background:var(--border);color:var(--muted);margin-left:4px}
+.folder-tag-badge{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--primary-soft);color:var(--primary);margin-left:4px}
+body.dark .folder-tag-badge{color:#93c5fd}
 .count-pill{font-size:11px;font-weight:700;color:var(--muted);background:var(--bg);padding:1px 6px;border-radius:8px;border:1px solid var(--border)}
 
 .workspace{flex:1;display:flex;flex-direction:column;min-width:0}
@@ -219,7 +220,7 @@ body.dark .user-badge{color:#93c5fd}
   border:1px solid var(--border);
 }
 .thumb-pdf{background:#fee2e2;color:#dc2626}
-.thumb-img{background:var(--bg);padding:0;overflow:hidden}
+.thumb-img{background:var(--bg);padding:0;overflow:hidden;cursor:zoom-in}
 .thumb-img img{width:100%;height:100%;object-fit:cover}
 .thumb-doc{background:#dbeafe;color:#2563eb}
 .thumb-xls{background:#dcfce7;color:#16a34a}
@@ -634,7 +635,7 @@ function isPdfFile(name) { return /\.pdf$/i.test(name || ""); }
 
 function getFileThumbnail(doc) {
   if (doc.file_url && isImageFile(doc.file_name)) {
-    return `<div class="file-thumb thumb-img"><img src="${safe(doc.file_url)}" alt=""></div>`;
+    return `<div class="file-thumb thumb-img" data-preview="${doc.id}"><img src="${safe(doc.file_url)}" alt=""></div>`;
   }
   if (!doc.file_name) {
     return `<div class="file-thumb thumb-note"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></div>`;
@@ -684,7 +685,7 @@ async function uploadFile(file) {
   const { error } = await db.storage.from(BUCKET).upload(path, file);
   if (error) throw error;
   const { data } = db.storage.from(BUCKET).getPublicUrl(path);
-  return { url: data.publicUrl, name: file.name, size: formatBytes(file.size) };
+  return { url: data.publicUrl, name: file.name, size: formatBytes(file.size), bytes: file.size };
 }
 
 async function handleDirectDrop(files, folderId) {
@@ -710,6 +711,7 @@ async function handleDirectDrop(files, folderId) {
         file_url: uploaded.url,
         file_name: uploaded.name,
         file_size: uploaded.size,
+        file_size_bytes: uploaded.bytes,
         author_id: user.id,
         author_name: profile?.display_name || "Membre"
       });
@@ -742,13 +744,12 @@ dropArea.addEventListener("drop", e => {
 async function load() {
   await loadSettings();
 
-  // On récupère les dossiers (avec gestion de la colonne 'tag' ou 'category' si elle existe, sinon champ par défaut)
   const { data: f, error: fe } = await db.from("folders").select("*").order("name");
   if (fe) return say("Erreur dossiers : " + fe.message);
   folders = f || [];
 
   const { data: d, error: de } = await db.from("documents")
-    .select("id,title,content,author_id,author_name,folder_id,file_url,file_name,file_size,created_at")
+    .select("id,title,content,author_id,author_name,folder_id,file_url,file_name,file_size,file_size_bytes,created_at")
     .order("created_at", { ascending: false });
   if (de) return say("Erreur documents : " + de.message);
   docs = d || [];
@@ -810,9 +811,9 @@ function switchView(view) {
   ["viewLibrary", "viewAdd", "viewMember", "viewAdmin"].forEach(id => $(id).classList.add("hidden"));
 
   if (view === "library" || view === "favs") $("viewLibrary").classList.remove("hidden");
-  else if (view === "add") $("viewAdd").classList.add("hidden");
-  else if (view === "member") $("viewMember").classList.add("hidden");
-  else if (view === "admin") $("viewAdmin").classList.add("hidden");
+  else if (view === "add") $("viewAdd").classList.remove("hidden");
+  else if (view === "member") $("viewMember").classList.remove("hidden");
+  else if (view === "admin") $("viewAdmin").classList.remove("hidden");
 
   render();
 }
@@ -1179,12 +1180,13 @@ async function addDoc() {
   $("uploadProgress").classList.remove("hidden");
 
   try {
-    let file_url = null, file_name = null, file_size = null;
+    let file_url = null, file_name = null, file_size = null, file_size_bytes = 0;
     if (pendingFile) {
       const uploaded = await uploadFile(pendingFile);
       file_url = uploaded.url;
       file_name = uploaded.name;
       file_size = uploaded.size;
+      file_size_bytes = uploaded.bytes;
       if (!title) title = pendingFile.name;
     }
 
@@ -1195,6 +1197,7 @@ async function addDoc() {
       file_url,
       file_name,
       file_size,
+      file_size_bytes,
       author_id: user.id,
       author_name: profile?.display_name || "Membre"
     });
