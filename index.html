@@ -228,6 +228,7 @@ body.dark .user-badge{color:#93c5fd}
 
 .doc-title{font-weight:700;font-size:14px;line-height:1.35;color:var(--text);word-break:break-word}
 .doc-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+.doc-class-pill{display:inline-block;font-size:10px;font-weight:700;background:var(--border);color:var(--text);padding:1px 5px;border-radius:4px;margin-left:4px}
 .doc-folder-badge{display:inline-block;font-size:10.5px;font-weight:700;background:var(--primary-soft);color:var(--primary);padding:2px 7px;border-radius:6px;margin-top:5px}
 body.dark .doc-folder-badge{color:#93c5fd}
 
@@ -266,7 +267,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
 .list-row select{width:auto;margin:0;padding:5px 9px}
 
 .modal-backdrop{position:fixed;inset:0;background:rgba(9,13,22,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px}
-.modal-window{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:14px;max-width:420px;width:100%;padding:22px;box-shadow:var(--shadow-hover)}
+.modal-window{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:14px;max-width:440px;width:100%;padding:22px;box-shadow:var(--shadow-hover)}
 .modal-window.large{max-width:900px;padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:90vh}
 .modal-head{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border)}
 .modal-body{padding:14px;overflow:auto;text-align:center}
@@ -319,7 +320,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
     <span id="countFavs" class="count-pill">0</span>
   </div>
   <div id="navMember" class="side-item hidden" data-view="member">
-    <span class="side-left">👤 <span>Mon espace</span></span>
+    <span class="side-left">👤 <span>Mon profil & classe</span></span>
   </div>
   <div id="navAdmin" class="side-item hidden" data-view="admin">
     <span class="side-left">⚙️ <span>Administration</span></span>
@@ -336,7 +337,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       <button id="collapseBtn" class="collapse-btn" title="Réduire la barre latérale">◀</button>
       <div class="search-wrap">
         <span>🔎</span>
-        <input id="search" placeholder="Rechercher un cours, un PDF... (Ctrl+K)">
+        <input id="search" placeholder="Rechercher un cours, un auteur, une classe... (Ctrl+K)">
       </div>
     </div>
 
@@ -425,8 +426,8 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
     <div id="viewMember" class="hidden">
       <div class="page-header">
         <div>
-          <h2 class="page-title">Mon espace personnel</h2>
-          <p class="page-sub">Gère ton profil et tes contributions</p>
+          <h2 class="page-title">Mon profil et ma classe</h2>
+          <p class="page-sub">Gère tes informations personnelles et tes publications</p>
         </div>
         <button class="sec-btn" data-back>← Retour</button>
       </div>
@@ -451,13 +452,18 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
 <div id="authModal" class="modal-backdrop hidden">
   <div class="modal-window">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h2 style="margin:0;font-size:18px">🔐 Connexion à ClassShare</h2>
+      <h2 style="margin:0;font-size:18px">🔐 Compte ClassShare</h2>
       <button id="closeAuthModal" class="mini-btn">✕</button>
     </div>
-    <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted)">Connecte-toi pour déposer des fichiers et rédiger des cours.</p>
+    <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted)">Renseigne tes informations pour configurer ton profil.</p>
     <input id="modalEmail" type="email" placeholder="Adresse e-mail">
     <input id="modalPassword" type="password" placeholder="Mot de passe (8 caractères min.)">
-    <input id="modalDisplayName" placeholder="Prénom ou pseudo (pour créer un compte)">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <input id="modalFirstname" placeholder="Prénom" style="margin:5px 0 10px">
+      <input id="modalLastname" placeholder="Nom" style="margin:5px 0 10px">
+    </div>
+    <input id="modalPseudo" placeholder="Pseudo (affiché publiquement)">
+    <input id="modalClass" placeholder="Classe (ex: Terminale S, 2nde 3...)">
     <div style="display:flex;gap:8px;margin-top:6px">
       <button id="modalLogin" class="primary-btn" style="flex:1">Se connecter</button>
       <button id="modalSignup" class="sec-btn" style="flex:1">Créer un compte</button>
@@ -713,7 +719,8 @@ async function handleDirectDrop(files, folderId) {
         file_size: uploaded.size,
         file_size_bytes: uploaded.bytes,
         author_id: user.id,
-        author_name: profile?.display_name || "Membre"
+        author_name: profile?.pseudo || profile?.firstname || profile?.display_name || "Membre",
+        author_class: profile?.class_name || ""
       });
       if (error) throw error;
     } catch (err) {
@@ -749,13 +756,13 @@ async function load() {
   folders = f || [];
 
   const { data: d, error: de } = await db.from("documents")
-    .select("id,title,content,author_id,author_name,folder_id,file_url,file_name,file_size,file_size_bytes,created_at")
+    .select("id,title,content,author_id,author_name,author_class,folder_id,file_url,file_name,file_size,file_size_bytes,created_at")
     .order("created_at", { ascending: false });
   if (de) return say("Erreur documents : " + de.message);
   docs = d || [];
 
   if (staff()) {
-    const { data: p } = await db.from("profiles").select("id,display_name,role").order("display_name");
+    const { data: p } = await db.from("profiles").select("id,firstname,lastname,pseudo,class_name,role").order("pseudo");
     allProfiles = p || [];
   } else {
     allProfiles = [];
@@ -773,8 +780,8 @@ async function refreshUser() {
   profile = null;
 
   if (user) {
-    const { data } = await db.from("profiles").select("display_name,role").eq("id", user.id).single();
-    profile = data;
+    const { data } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
+    profile = data || {};
     $("authModal").classList.add("hidden");
   }
   renderAccount();
@@ -788,10 +795,11 @@ function renderAccount() {
   $("quickUploadBtn").classList.toggle("hidden", !canPublish() || !folders.length);
 
   if (user) {
+    const displayName = profile?.pseudo || profile?.firstname || "Mon profil";
     const roleLabel = profile?.role === "admin" ? "Admin" : profile?.role === "moderator" ? "Modérateur" : "Membre";
     $("authHeaderSlot").innerHTML = `
-      <div class="user-badge" id="openMemberProfile" title="Accéder à mon espace">
-        <span>👤 ${safe(profile?.display_name || "Membre")}</span>
+      <div class="user-badge" id="openMemberProfile" title="Accéder à mon profil">
+        <span>👤 ${safe(displayName)}</span>
         <span style="font-size:10px;background:var(--primary);color:white;padding:2px 5px;border-radius:6px">${roleLabel}</span>
       </div>
       <button id="logoutBtn" class="icon-pill" title="Se déconnecter">🚪</button>
@@ -861,7 +869,7 @@ function render() {
   let filtered = docs.filter(d =>
     (activeView === "favs" ? favs.includes(d.id) : (selectedFolder === "ALL" || d.folder_id === selectedFolder)) &&
     (!onlyMine || (user && d.author_id === user.id)) &&
-    (d.title + " " + (d.content || "") + " " + (d.file_name || "") + " " + d.author_name).toLowerCase().includes(q)
+    (d.title + " " + (d.content || "") + " " + (d.file_name || "") + " " + (d.author_name || "") + " " + (d.author_class || "")).toLowerCase().includes(q)
   );
 
   if (sort === "oldest") {
@@ -880,6 +888,7 @@ function render() {
     const canPreview = d.file_url && (showImg || isPdfFile(d.file_name));
     const isFav = favs.includes(d.id);
     const thumbHTML = getFileThumbnail(d);
+    const classBadge = d.author_class ? `<span class="doc-class-pill">🎓 ${safe(d.author_class)}</span>` : "";
 
     return `
       <div class="doc ${hasText ? "has-text" : ""}">
@@ -889,7 +898,7 @@ function render() {
               ${thumbHTML}
               <div style="min-width:0">
                 <div class="doc-title">${safe(d.title)}</div>
-                <div class="doc-meta">${safe(d.author_name)} • ${formatDate(d.created_at)}</div>
+                <div class="doc-meta">${safe(d.author_name || "Membre")} ${classBadge} • ${formatDate(d.created_at)}</div>
                 ${(selectedFolder === "ALL" || activeView === "favs") && folderName ? `<span class="doc-folder-badge">📁 ${safe(folderName)}</span>` : ""}
               </div>
             </div>
@@ -921,11 +930,28 @@ function render() {
       </div>
 
       <div class="panel-card">
-        <h3>🪪 Mon profil public</h3>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <input id="myNewName" value="${safe(profile?.display_name || "")}" style="flex:1;margin:0">
-          <button id="saveMyName" class="primary-btn">Enregistrer</button>
+        <h3>🪪 Mon profil et ma classe</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <label><small>Prénom</small></label>
+            <input id="myFirstname" value="${safe(profile?.firstname || "")}">
+          </div>
+          <div>
+            <label><small>Nom</small></label>
+            <input id="myLastname" value="${safe(profile?.lastname || "")}">
+          </div>
         </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <label><small>Pseudo (affiché)</small></label>
+            <input id="myPseudo" value="${safe(profile?.pseudo || "")}">
+          </div>
+          <div>
+            <label><small>Classe</small></label>
+            <input id="myClass" value="${safe(profile?.class_name || "")}" placeholder="Ex: Terminale S">
+          </div>
+        </div>
+        <button id="saveMyProfile" class="primary-btn">💾 Enregistrer mes modifications</button>
       </div>
 
       <div class="panel-card">
@@ -989,7 +1015,7 @@ function render() {
         <h3>👥 Membres & Rôles (${allProfiles.length})</h3>
         ${allProfiles.map(p => `
           <div class="list-row">
-            <span>👤 <strong>${safe(p.display_name || "Sans nom")}</strong> ${p.id === user.id ? "<small>(Toi)</small>" : ""}</span>
+            <span>👤 <strong>${safe(p.pseudo || p.firstname || "Sans nom")}</strong> (${safe(p.class_name || "Sans classe")}) ${p.id === user.id ? "<small>(Toi)</small>" : ""}</span>
             <select data-role-user="${p.id}" ${p.id === user.id ? "disabled" : ""}>
               <option value="member" ${p.role === "member" ? "selected" : ""}>Membre</option>
               <option value="moderator" ${p.role === "moderator" ? "selected" : ""}>Modérateur</option>
@@ -1053,8 +1079,8 @@ function bindActions() {
   document.querySelectorAll("[data-rename-folder]").forEach(el => { el.onclick = () => renameFolder(el.dataset.renameFolder); });
   document.querySelectorAll("[data-role-user]").forEach(el => { el.onchange = () => changeUserRole(el.dataset.roleUser, el.value); });
 
-  const saveNameBtn = $("saveMyName");
-  if (saveNameBtn) saveNameBtn.onclick = updateMyDisplayName;
+  const saveProfileBtn = $("saveMyProfile");
+  if (saveProfileBtn) saveProfileBtn.onclick = updateProfile;
 
   const create = $("createFolder");
   if (create) create.onclick = addFolder;
@@ -1077,12 +1103,15 @@ $("sideNewBtn").onclick = () => {
 $("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
 $("authModal").onclick = e => { if (e.target === $("authModal")) $("authModal").classList.add("hidden"); };
 
-async function updateMyDisplayName() {
-  const newName = $("myNewName").value.trim();
-  if (!newName) return say("⚠️ Entre un pseudo valide");
-  const { error } = await db.from("profiles").update({ display_name: newName }).eq("id", user.id);
+async function updateProfile() {
+  const firstname = $("myFirstname").value.trim();
+  const lastname = $("myLastname").value.trim();
+  const pseudo = $("myPseudo").value.trim();
+  const class_name = $("myClass").value.trim();
+
+  const { error } = await db.from("profiles").update({ firstname, lastname, pseudo, class_name }).eq("id", user.id);
   if (error) return say("❌ " + error.message);
-  say("✅ Pseudo mis à jour");
+  say("✅ Profil et classe mis à jour");
   await refreshUser();
 }
 
@@ -1199,7 +1228,8 @@ async function addDoc() {
       file_size,
       file_size_bytes,
       author_id: user.id,
-      author_name: profile?.display_name || "Membre"
+      author_name: profile?.pseudo || profile?.firstname || "Membre",
+      author_class: profile?.class_name || ""
     });
     if (error) throw error;
 
@@ -1245,9 +1275,17 @@ async function editDoc(id) {
 async function signup() {
   const email = $("modalEmail").value.trim();
   const password = $("modalPassword").value;
-  const display_name = $("modalDisplayName").value.trim() || "Membre";
+  const firstname = $("modalFirstname").value.trim();
+  const lastname = $("modalLastname").value.trim();
+  const pseudo = $("modalPseudo").value.trim() || firstname || "Membre";
+  const class_name = $("modalClass").value.trim();
+
   if (!email || password.length < 8) return say("⚠️ E-mail valide et mot de passe de 8 caractères min.");
-  const { data, error } = await db.auth.signUp({ email, password, options: { data: { display_name } } });
+  const { data, error } = await db.auth.signUp({
+    email,
+    password,
+    options: { data: { firstname, lastname, pseudo, class_name, display_name: pseudo } }
+  });
   if (error) return say("❌ " + error.message);
   if (!data.session) return say("📩 Vérifie ta boîte e-mail pour confirmer ton compte");
   await refreshUser();
