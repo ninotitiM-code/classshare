@@ -53,7 +53,6 @@ body.style-compact{--radius:6px}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased;display:flex;min-height:100vh;overflow-x:hidden}
 
-/* Sidebar Pro */
 .sidebar{
   width:265px;
   background:var(--sidebar);
@@ -128,7 +127,6 @@ body.dark .side-item.active{color:#93c5fd}
 .side-left{display:flex;align-items:center;gap:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .count-pill{font-size:11px;font-weight:700;color:var(--muted);background:var(--bg);padding:1px 6px;border-radius:8px;border:1px solid var(--border)}
 
-/* Workspace */
 .workspace{flex:1;display:flex;flex-direction:column;min-width:0}
 
 .topbar{
@@ -209,7 +207,6 @@ body.dark .user-badge{color:#93c5fd}
 
 .doc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
 
-/* Miniatures pro */
 .file-thumb{
   width:40px;
   height:40px;
@@ -395,7 +392,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       <div class="page-header">
         <div>
           <h2 class="page-title">Publier une ressource</h2>
-          <p class="page-sub">Partage un fichier ou rédige une fiche de cours pour la communauté</p>
+          <p class="page-sub">Partage un fichier ou rédige une note pour la communauté</p>
         </div>
         <button class="sec-btn" data-back>← Retour</button>
       </div>
@@ -407,11 +404,12 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
         <label><small>Titre de la ressource</small></label>
         <input id="title" placeholder="Ex : Fiche de révision - Chapitre 3">
 
-        <label><small>Contenu ou description (optionnel)</small></label>
-        <textarea id="content" rows="5" placeholder="Écris ton résumé, tes notes ou colle un lien utile..."></textarea>
+        <label><small>Texte ou notes (optionnel - s'affichera directement dans la carte)</small></label>
+        <textarea id="content" rows="6" placeholder="Écris ton cours, tes notes ou colle un résumé ici..."></textarea>
 
+        <label><small>Fichier joint (optionnel)</small></label>
         <div id="dropZone" class="dropzone">
-          📎 <strong>Glisse ton fichier ici</strong> ou clique pour parcourir ton appareil
+          📎 <strong>Glisse ton fichier ici</strong> ou clique pour parcourir ton appareil (PDF, Image, Word...)
           <input id="fileInput" type="file" class="hidden">
           <div id="selectedFileName" style="margin-top:8px;font-weight:700;color:var(--primary)"></div>
         </div>
@@ -453,7 +451,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       <h2 style="margin:0;font-size:18px">🔐 Connexion à ClassShare</h2>
       <button id="closeAuthModal" class="mini-btn">✕</button>
     </div>
-    <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted)">Connecte-toi pour déposer des fichiers et gérer tes publications.</p>
+    <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted)">Connecte-toi pour déposer des fichiers et rédiger des cours.</p>
     <input id="modalEmail" type="email" placeholder="Adresse e-mail">
     <input id="modalPassword" type="password" placeholder="Mot de passe (8 caractères min.)">
     <input id="modalDisplayName" placeholder="Prénom ou pseudo (pour créer un compte)">
@@ -892,7 +890,7 @@ function render() {
         </div>
 
         <div class="doc-footer">
-          ${d.file_url ? `<a class="btn-download" href="${safe(d.file_url)}" target="_blank" rel="noopener">⬇️ Télécharger ${d.file_size ? `(${safe(d.file_size)})` : ""}</a>` : `<span style="font-size:11.5px;color:var(--muted)">Note texte</span>`}
+          ${d.file_url ? `<a class="btn-download" href="${safe(d.file_url)}" target="_blank" rel="noopener">⬇️ Télécharger ${d.file_size ? `(${safe(d.file_size)})` : ""}</a>` : `<span style="font-size:11.5px;color:var(--muted)">Note textuelle</span>`}
           ${canPreview ? `<button class="mini-btn" data-preview="${d.id}" title="Aperçu">👁️</button>` : ""}
           ${d.file_url ? `<button class="mini-btn" data-copy="${safe(d.file_url)}" title="Copier le lien">🔗</button>` : ""}
           ${editable ? `<button class="mini-btn" data-edit="${d.id}" title="Modifier">✏️</button>` : ""}
