@@ -535,13 +535,29 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       <option value="ban">🔨 Ban (Bannir définitivement avec motif)</option>
     </select>
 
-    <label><small>Motif personnalisé de la sanction (affiché lors de la tentative de connexion)</small></label>
+    <label><small>Motif personnalisé de la sanction (affiché sur le site lors de la connexion)</small></label>
     <input id="sanctionReason" placeholder="Ex : Non-respect des règles du chat ou spam...">
 
     <div style="display:flex;gap:8px;margin-top:14px">
       <button id="confirmSanctionBtn" class="danger-btn" style="flex:1;padding:10px">Appliquer la sanction</button>
       <button id="cancelSanctionBtn" class="sec-btn" style="flex:1">Annuler</button>
     </div>
+  </div>
+</div>
+
+<!-- Modale de message de Ban (Intégrée au site) -->
+<div id="banModal" class="modal-backdrop hidden">
+  <div class="modal-window" style="text-align:center;">
+    <div style="font-size:40px;margin-bottom:10px">⛔</div>
+    <h2 style="margin:0 0 8px;font-size:18px;color:#dc2626">Accès refusé - Compte banni</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Votre compte a été suspendu par l'administration.</p>
+    
+    <div style="background:var(--bg);border:1px solid var(--border);padding:12px;border-radius:8px;text-align:left;margin-bottom:16px">
+      <strong style="font-size:11.5px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">Motif du bannissement :</strong>
+      <span id="banReasonText" style="font-size:13.5px;font-weight:600;word-break:break-word"></span>
+    </div>
+
+    <button id="closeBanModalBtn" class="primary-btn" style="width:100%">Compris</button>
   </div>
 </div>
 
@@ -855,7 +871,9 @@ async function refreshUser() {
   }
 
   if (profile && profile.status === 'banned') {
-    alert("⛔ Accès refusé : Ton compte a été banni.\nMotif : " + (profile.ban_reason || "Aucun motif spécifié"));
+    const customReason = profile.ban_reason || "Violation des règles de la communauté.";
+    $("banReasonText").textContent = customReason;
+    $("banModal").classList.remove("hidden");
     localStorage.removeItem("cs_user_id");
     profile = null;
   }
@@ -875,6 +893,10 @@ async function refreshUser() {
     $("openAuthModal").onclick = () => $("authModal").classList.remove("hidden");
   }
 }
+
+$("closeBanModalBtn").onclick = () => {
+  $("banModal").classList.add("hidden");
+};
 
 async function loadData() {
   const [fRes, dRes, pRes, chRes, pmRes] = await Promise.all([
@@ -1584,7 +1606,9 @@ $("modalLogin").onclick = async () => {
 
   if (data.status === 'banned') {
     const customReason = data.ban_reason || "Violation des règles de la communauté.";
-    alert(`⛔ ACCÈS REFUSÉ\n\nVotre compte a été banni.\nMotif : ${customReason}`);
+    $("banReasonText").textContent = customReason;
+    $("banModal").classList.remove("hidden");
+    $("authModal").classList.add("hidden");
     return;
   }
 
