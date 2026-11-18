@@ -123,7 +123,6 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);lin
 .side-item:hover{background:var(--bg)}
 .side-item.active{background:var(--primary-soft);color:var(--primary);font-weight:700}
 body.dark .side-item.active{color:#93c5fd}
-.side-item.dragover{border:2px dashed var(--primary);background:var(--primary-soft);transform:scale(1.02)}
 .side-left{display:flex;align-items:center;gap:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .folder-tag-badge{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--primary-soft);color:var(--primary);margin-left:4px}
 body.dark .folder-tag-badge{color:#93c5fd}
@@ -144,7 +143,7 @@ body.dark .folder-tag-badge{color:#93c5fd}
   z-index:90;
   flex-wrap:wrap;
 }
-.mobile-menu-btn,.collapse-btn{display:none;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:7px 10px;border-radius:8px;font-size:14px;cursor:pointer}
+.collapse-btn{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:7px 10px;border-radius:8px;font-size:14px;cursor:pointer}
 
 .search-wrap{position:relative;flex:1;max-width:420px;min-width:180px}
 .search-wrap input{
@@ -174,7 +173,6 @@ body.dark .folder-tag-badge{color:#93c5fd}
 body.dark .user-badge{color:#93c5fd}
 
 .content-area{padding:22px;max-width:1240px;width:100%;margin:0 auto;flex:1}
-.content-area.dragover-area{outline:2px dashed var(--primary);outline-offset:-8px;background:var(--primary-soft);border-radius:var(--radius)}
 
 .page-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px}
 .page-title{margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em}
@@ -228,7 +226,6 @@ body.dark .user-badge{color:#93c5fd}
 
 .doc-title{font-weight:700;font-size:14px;line-height:1.35;color:var(--text);word-break:break-word}
 .doc-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
-.doc-class-pill{display:inline-block;font-size:10px;font-weight:700;background:var(--border);color:var(--text);padding:1px 5px;border-radius:4px;margin-left:4px}
 .doc-folder-badge{display:inline-block;font-size:10.5px;font-weight:700;background:var(--primary-soft);color:var(--primary);padding:2px 7px;border-radius:6px;margin-top:5px}
 body.dark .doc-folder-badge{color:#93c5fd}
 
@@ -252,7 +249,6 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary)
 button.primary-btn{background:var(--primary);color:white;border:0;padding:10px 16px;border-radius:9px;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
 button.primary-btn:hover{background:var(--primary-hover)}
 button.sec-btn{background:var(--bg);color:var(--text);border:1px solid var(--border);padding:9px 14px;border-radius:9px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
-button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
 
 .dropzone{border:2px dashed var(--border);background:var(--bg);padding:26px 18px;text-align:center;border-radius:var(--radius);margin:8px 0 14px;cursor:pointer;color:var(--muted);transition:.15s}
 .dropzone:hover,.dropzone.dragover{border-color:var(--primary);background:var(--primary-soft);color:var(--text)}
@@ -272,30 +268,20 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
 .modal-head{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border)}
 .modal-body{padding:14px;overflow:auto;text-align:center}
 .modal-body img{max-width:100%;max-height:74vh;border-radius:8px}
-.modal-body iframe{width:100%;height:74vh;border:0;border-radius:8px}
 
 .toast{position:fixed;bottom:20px;right:20px;background:#0f172a;color:white;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 10px 25px rgba(0,0,0,.3);z-index:1100;border-left:4px solid var(--primary);animation:pop .2s ease}
 @keyframes pop{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
 
 .hidden{display:none!important}
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:110}
-
-/* Barre latérale toujours visible et repliable */
-.collapse-btn{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
-.mobile-menu-btn{display:none!important}
 @media (max-width: 820px) {
   .sidebar{position:sticky;left:auto;top:0;transform:none;width:220px;padding:14px 10px}
   .sidebar.collapsed{width:64px;padding:14px 6px}
-  .sidebar.open{transform:none}
-  .sidebar-overlay,.sidebar-overlay.open{display:none!important}
   .topbar{padding:10px 14px}
   .content-area{padding:16px}
 }
 </style>
 </head>
 <body>
-
-<div id="sidebarOverlay" class="sidebar-overlay"></div>
 
 <aside id="sidebar" class="sidebar">
   <div class="brand">
@@ -333,11 +319,10 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
 <div class="workspace">
   <header class="topbar">
     <div style="display:flex;align-items:center;gap:10px;flex:1">
-      <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
       <button id="collapseBtn" class="collapse-btn" title="Réduire la barre latérale">◀</button>
       <div class="search-wrap">
         <span>🔎</span>
-        <input id="search" placeholder="Rechercher un cours, un auteur, une classe... (Ctrl+K)">
+        <input id="search" placeholder="Rechercher un cours, un auteur, une classe...">
       </div>
     </div>
 
@@ -425,7 +410,10 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
         <label>Nom</label><input id="myLastname">
         <label>Pseudo</label><input id="myPseudo">
         <label>Classe</label><input id="myClass" placeholder="Ex : 3e B">
-        <button class="primary-btn" id="saveMyProfile">Enregistrer mon profil</button>
+        <div style="display:flex;gap:10px;margin-top:8px">
+          <button class="primary-btn" id="saveMyProfile">Enregistrer mon profil</button>
+          <button class="sec-btn" id="logoutBtn" style="color:#dc2626">Se déconnecter</button>
+        </div>
       </div>
     </section>
 
@@ -472,12 +460,6 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
         <label>Sous-titre</label><input id="cfgSubtitle">
         <button class="primary-btn" id="saveSettings">Enregistrer les paramètres</button>
       </div>
-
-      <div class="panel-card">
-        <h3>Sauvegarde</h3>
-        <p style="font-size:12px;color:var(--muted)">Télécharge une copie des informations actuellement chargées.</p>
-        <button class="sec-btn" id="exportData">Exporter les données</button>
-      </div>
     </section>
   </main>
 </div>
@@ -488,14 +470,14 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       <h2 style="margin:0;font-size:18px">Connexion / Inscription</h2>
       <button class="mini-btn" id="closeAuthModal">✕</button>
     </div>
-    <p style="font-size:12px;color:var(--muted)">Connecte-toi pour publier et gérer tes ressources.</p>
+    <p style="font-size:12px;color:var(--muted)">Connecte-toi ou crée ton compte.</p>
     <label>E-mail</label><input id="modalEmail" type="email" placeholder="adresse@email.com">
-    <label>Mot de passe</label><input id="modalPassword" type="password" placeholder="8 caractères minimum">
-    <label>Prénom</label><input id="modalFirstname" placeholder="Prénom">
-    <label>Nom</label><input id="modalLastname" placeholder="Nom">
-    <label>Pseudo</label><input id="modalPseudo" placeholder="Pseudo">
-    <label>Classe</label><input id="modalClass" placeholder="Ex : 3e B">
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <label>Mot de passe</label><input id="modalPassword" type="password" placeholder="Mot de passe">
+    <label>Prénom (pour l'inscription)</label><input id="modalFirstname" placeholder="Prénom">
+    <label>Nom (pour l'inscription)</label><input id="modalLastname" placeholder="Nom">
+    <label>Pseudo (pour l'inscription)</label><input id="modalPseudo" placeholder="Pseudo">
+    <label>Classe (pour l'inscription)</label><input id="modalClass" placeholder="Ex : 3e B">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
       <button class="primary-btn" id="modalLogin">Se connecter</button>
       <button class="sec-btn" id="modalSignup">Créer un compte</button>
     </div>
@@ -517,7 +499,6 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-/* Configuration Supabase */
 const SUPABASE_URL = "https://twzeosslphrqprfpcxxv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_uknnIKbDO6PvOQxoOHDKIA_3HAWkR6h";
 const BUCKET = "classshare-files";
@@ -533,7 +514,6 @@ let users = [];
 let settings = {};
 let activeView = "library";
 let selectedFolder = "ALL";
-let pendingFile = null;
 let listView = false;
 
 function safe(value) {
@@ -581,14 +561,6 @@ function toggleFav(id) {
 
 function staff() {
   return ["admin","moderator","modo"].includes(profile?.role);
-}
-
-function isAdmin() {
-  return profile?.role === "admin";
-}
-
-function canPublish() {
-  return !!user;
 }
 
 function canManageDoc(doc) {
@@ -658,15 +630,12 @@ async function load() {
     db.from("folders").select("*").order("name")
   ]);
 
-  if (docResult.error) say("Erreur documents : " + docResult.error.message);
-  if (folderResult.error) say("Erreur dossiers : " + folderResult.error.message);
-
   docs = docResult.data || [];
   folders = folderResult.data || [];
 
   if (staff()) {
-    const { data: userData, error } = await db.from("profiles").select("*").order("firstname");
-    if (!error) users = userData || [];
+    const { data: userData } = await db.from("profiles").select("*").order("firstname");
+    users = userData || [];
   }
 
   const { data: config } = await db.from("settings").select("*").eq("id", 1).maybeSingle();
@@ -713,7 +682,6 @@ function renderAdmin() {
     <div class="list-row">
       <span>📁 ${safe(f.name)} <small>${safe(f.tag || "")}</small></span>
       <span>
-        <button class="mini-btn" data-rename-folder="${safe(f.id)}">✏️</button>
         <button class="mini-btn del" data-remove-folder="${safe(f.id)}">🗑️</button>
       </span>
     </div>
@@ -942,7 +910,6 @@ $("publish").onclick = async () => {
 $("saveMyProfile").onclick = async () => {
   if (!user) return;
   const updates = {
-    id: user.id,
     firstname: $("myFirstname").value,
     lastname: $("myLastname").value,
     pseudo: $("myPseudo").value,
@@ -950,7 +917,7 @@ $("saveMyProfile").onclick = async () => {
     updated_at: new Date()
   };
 
-  const { error } = await db.from("profiles").upsert(updates);
+  const { error } = await db.from("profiles").update(updates).eq("id", user.id);
   if (error) {
     say("Erreur lors de la sauvegarde : " + error.message);
   } else {
@@ -960,6 +927,14 @@ $("saveMyProfile").onclick = async () => {
   }
 };
 
+$("logoutBtn").onclick = async () => {
+  await db.auth.signOut();
+  say("Déconnecté");
+  await refreshUser();
+  switchView("library");
+};
+
+/* Connexion & Inscription d'origine avec séparation auth / profiles */
 $("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
 
 $("modalLogin").onclick = async () => {
@@ -979,6 +954,7 @@ $("modalSignup").onclick = async () => {
   const email = $("modalEmail").value;
   const password = $("modalPassword").value;
   
+  // 1. Inscription de base dans Supabase Auth
   const { data, error } = await db.auth.signUp({ email, password });
 
   if (error) {
@@ -986,6 +962,7 @@ $("modalSignup").onclick = async () => {
     return;
   }
 
+  // 2. Enregistrement des infos supplémentaires dans "profiles" (rendu possible grâce à la règle INSERT que l'on vient de mettre dans Supabase)
   if (data?.user) {
     const { error: profileError } = await db.from("profiles").insert({
       id: data.user.id,
