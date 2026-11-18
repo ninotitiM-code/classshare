@@ -473,6 +473,31 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
   </main>
 </div>
 
+<!-- Modale de Sanction (Kick / Ban) -->
+<div id="sanctionModal" class="modal-backdrop hidden">
+  <div class="modal-window">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h2 style="margin:0;font-size:18px" id="sanctionModalTitle">⚖️ Sanctionner un membre</h2>
+      <button id="closeSanctionModal" class="mini-btn">✕</button>
+    </div>
+    <input type="hidden" id="targetUserId">
+    
+    <label><small>Type de sanction</small></label>
+    <select id="sanctionType">
+      <option value="kick">👢 Kick (Déconnecter / Supprimer le compte)</option>
+      <option value="ban">🔨 Ban (Bannir définitivement)</option>
+    </select>
+
+    <label><small>Motif de la sanction</small></label>
+    <input id="sanctionReason" placeholder="Ex : Non-respect des règles, spam...">
+
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button id="confirmSanctionBtn" class="danger-btn" style="flex:1;padding:10px">Appliquer la sanction</button>
+      <button id="cancelSanctionBtn" class="sec-btn" style="flex:1">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modale de connexion / inscription -->
 <div id="authModal" class="modal-backdrop hidden">
   <div class="modal-window">
@@ -707,7 +732,7 @@ $("previewModal").onclick = e => { if (e.target === $("previewModal")) $("closeP
 
 function isAdmin() { return profile?.role === "admin"; }
 function staff() { return ["admin", "moderator"].includes(profile?.role); }
-function canPublish() { return !!profile; }
+function canPublish() { return !!profile && profile.status !== 'banned'; }
 function canManageDoc(doc) { return staff() || (!!profile && doc.author_id === profile.id); }
 
 function applySiteIdentity() {
@@ -777,6 +802,13 @@ async function refreshUser() {
     const { data: p } = await db.from("profiles").select("*").eq("id", savedId).maybeSingle();
     profile = p || null;
     if (!profile) localStorage.removeItem("cs_user_id");
+  }
+
+  // Vérifier si l'utilisateur est banni
+  if (profile && profile.status === 'banned') {
+    alert("⛔ Ton compte a été banni. Motif : " + (profile.ban_reason || "Aucun motif spécifié"));
+    localStorage.removeItem("cs_user_id");
+    profile = null;
   }
 
   $("navMember").classList.toggle("hidden", !profile);
@@ -1177,7 +1209,7 @@ function renderAdminView() {
     </div>
 
     <div class="panel-card">
-      <h3>🛠️ Panel de modération des membres (Kick / Ban / Rôles)</h3>
+      <h3>🛠️ Panel de modération (Kick / Ban / Rôles)</h3>
       <div id="adminUserList"></div>
     </div>
 
@@ -1227,10 +1259,12 @@ function renderAdminView() {
 
   let uHtml = "";
   for (const p of allProfiles) {
+    const isBanned = p.status === 'banned';
     uHtml += `
       <div class="list-row">
         <div>
           <strong>👤 ${safe(p.pseudo || p.firstname)}</strong> <small>(${safe(p.class_name || "Sans classe")})</small>
+          ${isBanned ? `<span style="color:#dc2626;font-size:11px;font-weight:700;margin-left:6px">[BANNI]</span>` : ""}
         </div>
         <div style="display:flex;gap:6px;align-items:center">
           <select data-roleuid="${p.id}">
@@ -1238,7 +1272,7 @@ function renderAdminView() {
             <option value="moderator" ${p.role === "moderator" ? "selected" : ""}>Modérateur</option>
             <option value="admin" ${p.role === "admin" ? "selected" : ""}>Administrateur</option>
           </select>
-          <button class="danger-btn" data-kickuid="${p.id}" style="padding:5px 10px;font-size:11px">Kick / Supprimer</button>
+          <button class="danger-btn" data-sanctionuid="${p.id}" data-sanctionname="${safe(p.pseudo)}" style="padding:5px 10px;font-size:11px">⚖️ Sanctionner</button>
         </div>
       </div>
     `;
@@ -1255,19 +1289,17 @@ function renderAdminView() {
     };
   });
 
-  document.querySelectorAll("[data-kickuid]").forEach(btn => {
-    btn.onclick = async () => {
-      const uid = btn.dataset.kickuid;
-      if (uid === profile.id) return say("⚠️ Tu ne peux pas te supprimer toi-même !");
-      if (!confirm("Voulez-vous vraiment expulser/supprimer ce membre ?")) return;
-
-      const { error } = await db.from("profiles").delete().eq("id", uid);
-      if (error) say("Erreur : " + error.message);
-      else {
-        say("👢 Membre expulsé avec succès !");
-        await loadData();
-        renderAdminView();
-      }
+  // Ouvrir la modale de sanction
+  document.querySelectorAll("[data-sanctionuid]").forEach(btn => {
+    btn.onclick = () => {
+      const uid = btn.dataset.sanctionuid;
+      const name = btn.dataset.sanctionname;
+      if (uid === profile.id) return say("⚠️ Tu ne peux pas te sanctionner toi-même !");
+      
+      $("targetUserId").value = uid;
+      $("sanctionModalTitle").textContent = `⚖️ Sanctionner : ${name}`;
+      $("sanctionReason").value = "";
+      $("sanctionModal").classList.remove("hidden");
     };
   });
 
@@ -1283,6 +1315,33 @@ function renderAdminView() {
   };
 }
 
+// Gestion des actions de la modale de sanction
+$("closeSanctionModal").onclick = () => $("sanctionModal").classList.add("hidden");
+$("cancelSanctionBtn").onclick = () => $("sanctionModal").classList.add("hidden");
+
+$("confirmSanctionBtn").onclick = async () => {
+  const uid = $("targetUserId").value;
+  const type = $("sanctionType").value;
+  const reason = $("sanctionReason").value.trim() || "Aucun motif";
+
+  $("sanctionModal").classList.add("hidden");
+
+  if (type === "kick") {
+    // Le kick supprime le profil de la base pour le déconnecter de force
+    const { error } = await db.from("profiles").delete().eq("id", uid);
+    if (error) say("Erreur : " + error.message);
+    else say("👢 Membre expulsé (Kick) avec succès !");
+  } else if (type === "ban") {
+    // Le ban met le statut à banned
+    const { error } = await db.from("profiles").update({ status: 'banned', ban_reason: reason }).eq("id", uid);
+    if (error) say("Erreur : " + error.message);
+    else say("🔨 Membre banni avec succès !");
+  }
+
+  await loadData();
+  renderAdminView();
+};
+
 $("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
 
 $("modalLogin").onclick = async () => {
@@ -1292,6 +1351,10 @@ $("modalLogin").onclick = async () => {
 
   const { data, error } = await db.from("profiles").select("*").ilike("pseudo", pseudo).maybeSingle();
   if (error || !data) return say("❌ Pseudo introuvable.");
+
+  if (data.status === 'banned') {
+    return say("⛔ Ce compte a été banni.");
+  }
 
   if (data.password && data.password !== password) {
     return say("❌ Mot de passe incorrect !");
@@ -1320,7 +1383,8 @@ $("modalSignup").onclick = async () => {
     firstname: $("modalFirstname").value.trim() || pseudo,
     lastname: $("modalLastname").value.trim() || "",
     class_name: $("modalClass").value.trim() || "",
-    role: "member"
+    role: "member",
+    status: "active"
   });
 
   if (error) {
