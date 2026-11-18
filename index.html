@@ -532,11 +532,11 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
     <label><small>Type de sanction</small></label>
     <select id="sanctionType">
       <option value="kick">👢 Kick (Déconnecter / Supprimer le compte)</option>
-      <option value="ban">🔨 Ban (Bannir définitivement)</option>
+      <option value="ban">🔨 Ban (Bannir définitivement avec motif)</option>
     </select>
 
-    <label><small>Motif de la sanction</small></label>
-    <input id="sanctionReason" placeholder="Ex : Non-respect des règles, spam...">
+    <label><small>Motif personnalisé de la sanction (affiché lors de la tentative de connexion)</small></label>
+    <input id="sanctionReason" placeholder="Ex : Non-respect des règles du chat ou spam...">
 
     <div style="display:flex;gap:8px;margin-top:14px">
       <button id="confirmSanctionBtn" class="danger-btn" style="flex:1;padding:10px">Appliquer la sanction</button>
@@ -855,7 +855,7 @@ async function refreshUser() {
   }
 
   if (profile && profile.status === 'banned') {
-    alert("⛔ Ton compte a été banni. Motif : " + (profile.ban_reason || "Aucun motif spécifié"));
+    alert("⛔ Accès refusé : Ton compte a été banni.\nMotif : " + (profile.ban_reason || "Aucun motif spécifié"));
     localStorage.removeItem("cs_user_id");
     profile = null;
   }
@@ -1374,7 +1374,7 @@ $("pmSendBtn").onclick = sendPrivateMessage;
 $("pmInput").onkeydown = e => { if (e.key === "Enter") sendPrivateMessage(); };
 
 
-/* TEMPS RÉEL SUPABASE CORRIGÉ ET ACTIF */
+/* TEMPS RÉEL SUPABASE */
 db.channel('realtime-all-messages')
   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'discord_messages' }, payload => {
     if (!chatMessages.some(m => m.id === payload.new.id)) {
@@ -1429,7 +1429,7 @@ function renderAdminView() {
     </div>
 
     <div class="panel-card">
-      <h3>🛠️ Panel de modération (Kick / Ban / Rôles)</h3>
+      <h3>🛠️ Panel de modération (Kick / Ban / Débannir / Rôles)</h3>
       <div id="adminUserList"></div>
     </div>
 
@@ -1492,6 +1492,7 @@ function renderAdminView() {
             <option value="moderator" ${p.role === "moderator" ? "selected" : ""}>Modérateur</option>
             <option value="admin" ${p.role === "admin" ? "selected" : ""}>Administrateur</option>
           </select>
+          ${isBanned ? `<button class="primary-btn" data-unbanuid="${p.id}" style="padding:5px 10px;font-size:11px">✨ Débannir</button>` : ``}
           <button class="danger-btn" data-sanctionuid="${p.id}" data-sanctionname="${safe(p.pseudo)}" style="padding:5px 10px;font-size:11px">⚖️ Sanctionner</button>
         </div>
       </div>
@@ -1506,6 +1507,19 @@ function renderAdminView() {
       const { error } = await db.from("profiles").update({ role }).eq("id", uid);
       if (error) say("Erreur : " + error.message);
       else say("✅ Rôle mis à jour");
+    };
+  });
+
+  document.querySelectorAll("[data-unbanuid]").forEach(btn => {
+    btn.onclick = async () => {
+      const uid = btn.dataset.unbanuid;
+      const { error } = await db.from("profiles").update({ status: 'active', ban_reason: null }).eq("id", uid);
+      if (error) say("Erreur : " + error.message);
+      else {
+        say("✅ Membre débanni avec succès !");
+        await loadData();
+        renderAdminView();
+      }
     };
   });
 
@@ -1540,7 +1554,7 @@ $("cancelSanctionBtn").onclick = () => $("sanctionModal").classList.add("hidden"
 $("confirmSanctionBtn").onclick = async () => {
   const uid = $("targetUserId").value;
   const type = $("sanctionType").value;
-  const reason = $("sanctionReason").value.trim() || "Aucun motif";
+  const reason = $("sanctionReason").value.trim() || "Aucun motif spécifié par la modération.";
 
   $("sanctionModal").classList.add("hidden");
 
@@ -1551,7 +1565,7 @@ $("confirmSanctionBtn").onclick = async () => {
   } else if (type === "ban") {
     const { error } = await db.from("profiles").update({ status: 'banned', ban_reason: reason }).eq("id", uid);
     if (error) say("Erreur : " + error.message);
-    else say("🔨 Membre banni avec succès !");
+    else say("🔨 Membre banni avec motif enregistré !");
   }
 
   await loadData();
@@ -1569,7 +1583,9 @@ $("modalLogin").onclick = async () => {
   if (error || !data) return say("❌ Pseudo introuvable.");
 
   if (data.status === 'banned') {
-    return say("⛔ Ce compte a été banni.");
+    const customReason = data.ban_reason || "Violation des règles de la communauté.";
+    alert(`⛔ ACCÈS REFUSÉ\n\nVotre compte a été banni.\nMotif : ${customReason}`);
+    return;
   }
 
   if (data.password && data.password !== password) {
