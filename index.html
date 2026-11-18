@@ -123,7 +123,6 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);lin
 .side-item:hover{background:var(--bg)}
 .side-item.active{background:var(--primary-soft);color:var(--primary);font-weight:700}
 body.dark .side-item.active{color:#93c5fd}
-.side-item.dragover{border:2px dashed var(--primary);background:var(--primary-soft);transform:scale(1.02)}
 .side-left{display:flex;align-items:center;gap:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .folder-tag-badge{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--primary-soft);color:var(--primary);margin-left:4px}
 body.dark .folder-tag-badge{color:#93c5fd}
@@ -265,12 +264,13 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
 .list-row:last-child{border-bottom:none}
 .list-row select{width:auto;margin:0;padding:5px 9px}
 
-/* STYLES CHAT EN DIRECT */
+/* STYLES CHAT ET MP */
 .chat-layout{display:flex;height:calc(100vh - 70px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
 .chat-sidebar{width:220px;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:12px;flex-shrink:0}
 .chat-main{flex:1;display:flex;flex-direction:column;background:var(--card);min-width:0}
 .chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
-.chat-msg{display:flex;gap:10px;align-items:flex-start}
+.chat-msg{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:6px;border-radius:8px;transition:.1s}
+.chat-msg:hover{background:var(--bg)}
 .chat-avatar{width:36px;height:36px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
 .chat-msg-content{flex:1}
 .chat-msg-header{display:flex;align-items:baseline;gap:8px}
@@ -456,35 +456,52 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       <div id="memberContent"></div>
     </div>
 
-    <!-- VUE 4 : CHAT EN DIRECT -->
+    <!-- VUE 4 : CHAT EN DIRECT & MESSAGERIE PRIVÉE -->
     <div id="viewChat" class="hidden" style="flex:1;display:flex;flex-direction:column">
       <div class="page-header" style="margin-bottom:12px">
         <div>
-          <h2 class="page-title">💬 Salon de discussion en direct</h2>
-          <p class="page-sub">Discute instantanément avec tous les membres connectés</p>
+          <h2 id="chatHeaderTitle" class="page-title">💬 Salon Général en direct</h2>
+          <p id="chatHeaderSub" class="page-sub">Discute instantanément avec tous les membres connectés</p>
         </div>
-        <button class="sec-btn" data-back>← Retour</button>
+        <div style="display:flex;gap:8px">
+          <button id="switchPublicChat" class="icon-pill active">📢 Salon Général</button>
+          <button id="switchPrivateChat" class="icon-pill">🔒 Mes Messages Privés</button>
+          <button class="sec-btn" data-back>← Retour</button>
+        </div>
       </div>
 
-      <div class="chat-layout">
+      <!-- Vue Chat Général -->
+      <div id="publicChatSection" class="chat-layout">
         <div class="chat-sidebar">
-          <div class="nav-label">Salons</div>
+          <div class="nav-label">Salon</div>
           <div class="side-item active" style="margin-bottom:4px"># 📁 Général</div>
-          <div class="side-item" style="margin-bottom:4px"># 📚 Entraide</div>
-          <div class="side-item"># 🎮 Détente</div>
         </div>
-
         <div class="chat-main">
           <div id="chatMessages" class="chat-messages"></div>
           <div class="chat-input-area">
-            <input id="chatInput" placeholder="Écris ton message..." autocomplete="off">
+            <input id="chatInput" placeholder="Écris ton message dans le général..." autocomplete="off">
             <button id="chatSendBtn" class="primary-btn">Envoyer</button>
           </div>
         </div>
-
         <div class="chat-users-sidebar">
-          <div class="nav-label">Membres inscrits</div>
+          <div class="nav-label">Membres connectés</div>
           <div id="chatUserList" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
+        </div>
+      </div>
+
+      <!-- Vue Messages Privés -->
+      <div id="privateChatSection" class="chat-layout hidden">
+        <div class="chat-sidebar">
+          <div class="nav-label">Discuter avec :</div>
+          <div id="privateUserList" style="display:flex;flex-direction:column;gap:4px;margin-top:6px;overflow-y:auto;max-height:calc(100vh - 180px)"></div>
+        </div>
+        <div class="chat-main">
+          <div id="pmHeader" style="padding:10px 16px;border-bottom:1px solid var(--border);font-weight:700;font-size:13px;background:var(--bg)">Sélectionne un membre pour voir la conversation privée</div>
+          <div id="pmMessages" class="chat-messages"></div>
+          <div class="chat-input-area" id="pmInputArea" style="display:none">
+            <input id="pmInput" placeholder="Écris un message privé confidentiel..." autocomplete="off">
+            <button id="pmSendBtn" class="primary-btn">Envoyer en MP</button>
+          </div>
         </div>
       </div>
     </div>
@@ -591,12 +608,15 @@ let folders = [];
 let docs = [];
 let allProfiles = [];
 let chatMessages = [];
+let privateMessages = [];
+let activePmUserId = null;
 let settings = {
   site_title: "ClassShare",
   site_subtitle: "Espace collaboratif",
   theme_color: "#2563eb"
 };
 let activeView = "library";
+let activeChatSubView = "public"; // 'public' ou 'private'
 let selectedFolder = "ALL";
 let toastTimer = null;
 
@@ -857,22 +877,27 @@ async function refreshUser() {
 }
 
 async function loadData() {
-  const [fRes, dRes, pRes, chRes] = await Promise.all([
+  const [fRes, dRes, pRes, chRes, pmRes] = await Promise.all([
     db.from("folders").select("*").order("name"),
     db.from("documents").select("*").order("created_at", { ascending: false }),
     db.from("profiles").select("*"),
-    db.from("discord_messages").select("*").order("created_at", { ascending: true })
+    db.from("discord_messages").select("*").order("created_at", { ascending: true }),
+    profile ? db.from("private_messages").select("*").or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id}`).order("created_at", { ascending: true }) : Promise.resolve({ data: [] })
   ]);
 
   folders = fRes.data || [];
   docs = dRes.data || [];
   allProfiles = pRes.data || [];
   chatMessages = chRes.data || [];
+  privateMessages = pmRes.data || [];
 
   renderSidebarFolders();
   renderDestinationOptions();
   render();
-  if (activeView === "chat") renderChat();
+  if (activeView === "chat") {
+    if (activeChatSubView === "public") renderChat();
+    else renderPrivateChat();
+  }
 }
 
 function switchView(view) {
@@ -887,7 +912,10 @@ function switchView(view) {
 
   if (view === "library") render();
   if (view === "member") renderMemberView();
-  if (view === "chat") renderChat();
+  if (view === "chat") {
+    if (activeChatSubView === "public") renderChat();
+    else renderPrivateChat();
+  }
   if (view === "admin") renderAdminView();
 }
 
@@ -1166,27 +1194,54 @@ function renderMemberView() {
   };
 }
 
-/* GESTION DU CHAT EN DIRECT */
+/* BASCULE ENTRE CHAT PUBLIC ET MESSAGES PRIVÉS */
+$("switchPublicChat").onclick = () => {
+  activeChatSubView = "public";
+  $("switchPublicChat").classList.add("active");
+  $("switchPrivateChat").classList.remove("active");
+  $("publicChatSection").classList.remove("hidden");
+  $("privateChatSection").classList.add("hidden");
+  $("chatHeaderTitle").textContent = "💬 Salon Général en direct";
+  $("chatHeaderSub").textContent = "Discute instantanément avec tous les membres connectés";
+  renderChat();
+};
+
+$("switchPrivateChat").onclick = () => {
+  activeChatSubView = "private";
+  $("switchPrivateChat").classList.add("active");
+  $("switchPublicChat").classList.remove("active");
+  $("privateChatSection").classList.remove("hidden");
+  $("publicChatSection").classList.add("hidden");
+  $("chatHeaderTitle").textContent = "🔒 Messages Privés Confidentiels";
+  $("chatHeaderSub").textContent = "Conversations privées sécurisées entre toi et un membre";
+  renderPrivateChatList();
+};
+
+/* GESTION DU CHAT GÉNÉRAL */
 function renderChat() {
   if (!profile) return switchView("library");
 
   let html = "";
   for (const m of chatMessages) {
     const initial = (m.author_name || "A")[0].toUpperCase();
+    const canDel = staff() || m.author_id === profile.id;
     html += `
       <div class="chat-msg">
-        <div class="chat-avatar">${safe(initial)}</div>
-        <div class="chat-msg-content">
-          <div class="chat-msg-header">
-            <span class="chat-username">${safe(m.author_name)}</span>
-            <span class="chat-time">${formatDate(m.created_at)}</span>
+        <div style="display:flex;gap:10px;align-items:flex-start;flex:1">
+          <div class="chat-avatar">${safe(initial)}</div>
+          <div class="chat-msg-content">
+            <div class="chat-msg-header">
+              <span class="chat-username">${safe(m.author_name)}</span>
+              <span class="chat-time">${formatDate(m.created_at)}</span>
+            </div>
+            <div class="chat-text">${safe(m.content)}</div>
           </div>
-          <div class="chat-text">${safe(m.content)}</div>
         </div>
+        ${canDel ? `<button class="mini-btn del" data-delchat="${m.id}" title="Supprimer">🗑️</button>` : ""}
       </div>
     `;
   }
-  $("chatMessages").innerHTML = html || `<p style="color:var(--muted);text-align:center;padding:20px">Aucun message pour l'instant. Soyez le premier à parler !</p>`;
+  $("chatMessages").innerHTML = html || `<p style="color:var(--muted);text-align:center;padding:20px">Aucun message pour l'instant.</p>`;
   
   const container = $("chatMessages");
   container.scrollTop = container.scrollHeight;
@@ -1201,6 +1256,17 @@ function renderChat() {
     `;
   }
   $("chatUserList").innerHTML = uHtml;
+
+  document.querySelectorAll("[data-delchat]").forEach(btn => {
+    btn.onclick = async () => {
+      const { error } = await db.from("discord_messages").delete().eq("id", btn.dataset.delchat);
+      if (error) say("Erreur : " + error.message);
+      else {
+        chatMessages = chatMessages.filter(x => x.id !== btn.dataset.delchat);
+        renderChat();
+      }
+    };
+  });
 }
 
 async function sendChatMessage() {
@@ -1213,26 +1279,130 @@ async function sendChatMessage() {
     content: text
   });
 
-  if (error) {
-    say("Erreur : " + error.message);
-  } else {
-    $("chatInput").value = "";
-  }
+  if (error) say("Erreur : " + error.message);
+  else $("chatInput").value = "";
 }
 
 $("chatSendBtn").onclick = sendChatMessage;
-$("chatInput").onkeydown = e => {
-  if (e.key === "Enter") sendChatMessage();
-};
+$("chatInput").onkeydown = e => { if (e.key === "Enter") sendChatMessage(); };
 
-// Écoute en temps réel de Supabase pour afficher les messages instantanément sans refresh
-db.channel('realtime-chat-messages')
+
+/* GESTION DES MESSAGES PRIVÉS (MP) */
+function renderPrivateChatList() {
+  let listHtml = "";
+  for (const p of allProfiles) {
+    if (p.id === profile.id) continue;
+    const activeClass = activePmUserId === p.id ? "active" : "";
+    listHtml += `
+      <div class="side-item ${activeClass}" data-pmuid="${p.id}" style="justify-content:flex-start">
+        <span style="width:7px;height:7px;border-radius:50%;background:#3b82f6;display:inline-block"></span>
+        <span>${safe(p.pseudo || p.firstname)}</span>
+      </div>
+    `;
+  }
+  $("privateUserList").innerHTML = listHtml || "<p style='font-size:12px;color:var(--muted);padding:8px'>Aucun autre membre</p>";
+
+  document.querySelectorAll("[data-pmuid]").forEach(el => {
+    el.onclick = () => {
+      activePmUserId = el.dataset.pmuid;
+      renderPrivateChatList();
+      renderPrivateMessages();
+    };
+  });
+
+  if (activePmUserId) renderPrivateMessages();
+}
+
+function renderPrivateMessages() {
+  const targetUser = allProfiles.find(x => x.id === activePmUserId);
+  if (!targetUser) {
+    $("pmHeader").textContent = "Sélectionne un membre pour discuter";
+    $("pmMessages").innerHTML = "";
+    $("pmInputArea").style.display = "none";
+    return;
+  }
+
+  $("pmHeader").textContent = `Conversation privée avec ${targetUser.pseudo || targetUser.firstname}`;
+  $("pmInputArea").style.display = "flex";
+
+  const thread = privateMessages.filter(m => 
+    (m.sender_id === profile.id && m.recipient_id === activePmUserId) ||
+    (m.sender_id === activePmUserId && m.recipient_id === profile.id)
+  );
+
+  let html = "";
+  for (const m of thread) {
+    const isMe = m.sender_id === profile.id;
+    const senderName = isMe ? "Moi" : (targetUser.pseudo || targetUser.firstname);
+    html += `
+      <div class="chat-msg" style="background:${isMe ? 'var(--primary-soft)' : 'var(--bg)'};border-radius:8px;padding:8px">
+        <div style="flex:1">
+          <div class="chat-msg-header">
+            <span class="chat-username">${safe(senderName)}</span>
+            <span class="chat-time">${formatDate(m.created_at)}</span>
+          </div>
+          <div class="chat-text">${safe(m.content)}</div>
+        </div>
+        ${isMe ? `<button class="mini-btn del" data-delpm="${m.id}" title="Supprimer">🗑️</button>` : ""}
+      </div>
+    `;
+  }
+
+  $("pmMessages").innerHTML = html || `<p style="color:var(--muted);text-align:center;padding:20px">Aucun message avec ${safe(targetUser.pseudo)}. Envoie le premier !</p>`;
+  const container = $("pmMessages");
+  container.scrollTop = container.scrollHeight;
+
+  document.querySelectorAll("[data-delpm]").forEach(btn => {
+    btn.onclick = async () => {
+      const { error } = await db.from("private_messages").delete().eq("id", btn.dataset.delpm);
+      if (error) say("Erreur : " + error.message);
+      else {
+        privateMessages = privateMessages.filter(x => x.id !== btn.dataset.delpm);
+        renderPrivateMessages();
+      }
+    };
+  });
+}
+
+async function sendPrivateMessage() {
+  const text = $("pmInput").value.trim();
+  if (!text || !activePmUserId) return;
+
+  const { error } = await db.from("private_messages").insert({
+    sender_id: profile.id,
+    recipient_id: activePmUserId,
+    content: text
+  });
+
+  if (error) say("Erreur : " + error.message);
+  else $("pmInput").value = "";
+}
+
+$("pmSendBtn").onclick = sendPrivateMessage;
+$("pmInput").onkeydown = e => { if (e.key === "Enter") sendPrivateMessage(); };
+
+
+/* TEMPS RÉEL SUPABASE (Chat public et MP) */
+db.channel('realtime-all-messages')
   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'discord_messages' }, payload => {
-    // Évite les doublons si le message vient d'être inséré par l'utilisateur courant
     if (!chatMessages.some(m => m.id === payload.new.id)) {
       chatMessages.push(payload.new);
-      if (activeView === "chat") renderChat();
+      if (activeView === "chat" && activeChatSubView === "public") renderChat();
     }
+  })
+  .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'discord_messages' }, payload => {
+    chatMessages = chatMessages.filter(m => m.id !== payload.old.id);
+    if (activeView === "chat" && activeChatSubView === "public") renderChat();
+  })
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'private_messages' }, payload => {
+    if (!privateMessages.some(m => m.id === payload.new.id)) {
+      privateMessages.push(payload.new);
+      if (activeView === "chat" && activeChatSubView === "private") renderPrivateMessages();
+    }
+  })
+  .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'private_messages' }, payload => {
+    privateMessages = privateMessages.filter(m => m.id !== payload.old.id);
+    if (activeView === "chat" && activeChatSubView === "private") renderPrivateMessages();
   })
   .subscribe();
 
