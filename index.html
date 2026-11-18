@@ -640,7 +640,6 @@ async function refreshUser() {
   $("navMember").classList.toggle("hidden", !user);
   $("navAdmin").classList.toggle("hidden", !staff());
   
-  // Mise à jour de l'affichage dans le header (Connexion / Pseudo)
   const authSlot = $("authHeaderSlot");
   if (user) {
     authSlot.innerHTML = `<div class="user-badge" id="userBadgeTrigger">👤 ${safe(profile?.pseudo || profile?.firstname || user.email)}</div>`;
@@ -759,7 +758,6 @@ function render() {
   if (activeView === "favs") {
     const favs = getFavs();
     list = list.filter(d => favs.includes(d.id));
-    $("pageTitle.textContent" ) // géré en bas
     $("pageTitle").textContent = "Mes favoris";
     $("pageSub").textContent = "Retrouve tes ressources sauvegardées.";
   } else if (selectedFolder !== "ALL") {
@@ -826,7 +824,6 @@ function render() {
     `;
   }).join("") || `<p style="color:var(--muted);grid-column:1/-1;text-align:center;padding:30px">Aucune ressource trouvée.</p>`;
 
-  // Écouteurs pour les cartes de documents
   document.querySelectorAll("[data-fav]").forEach(btn => {
     btn.onclick = () => toggleFav(btn.dataset.fav);
   });
@@ -847,7 +844,6 @@ function render() {
   });
 }
 
-/* Écouteurs généraux et actions du site */
 $("sideNewBtn").onclick = () => { if (!user) { $("authModal").classList.remove("hidden"); } else { switchView("add"); } };
 $("navAll").onclick = () => { selectedFolder = "ALL"; switchView("library"); };
 $("navFavs").onclick = () => { switchView("favs"); };
@@ -890,7 +886,6 @@ document.querySelectorAll(".dot").forEach(dot => {
   };
 });
 
-/* Gestion de l'ajout d'un document */
 let selectedFile = null;
 $("dropZone").onclick = () => $("fileInput").click();
 $("fileInput").onchange = e => {
@@ -944,7 +939,6 @@ $("publish").onclick = async () => {
   }
 };
 
-/* Enregistrement du profil (Page Membre) */
 $("saveMyProfile").onclick = async () => {
   if (!user) return;
   const updates = {
@@ -966,7 +960,6 @@ $("saveMyProfile").onclick = async () => {
   }
 };
 
-/* Modale de Connexion / Inscription CORRIGÉE */
 $("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
 
 $("modalLogin").onclick = async () => {
@@ -982,12 +975,10 @@ $("modalLogin").onclick = async () => {
   }
 };
 
-// Partie modifiée pour éviter l'erreur de base de données à l'inscription
 $("modalSignup").onclick = async () => {
   const email = $("modalEmail").value;
   const password = $("modalPassword").value;
   
-  // 1. Inscription basique de l'utilisateur dans Supabase Auth
   const { data, error } = await db.auth.signUp({ email, password });
 
   if (error) {
@@ -995,14 +986,14 @@ $("modalSignup").onclick = async () => {
     return;
   }
 
-  // 2. Si le compte est bien créé, on enregistre les informations du profil séparément
   if (data?.user) {
-    const { error: profileError } = await db.from("profiles").upsert({
+    const { error: profileError } = await db.from("profiles").insert({
       id: data.user.id,
-      firstname: $("modalFirstname").value,
-      lastname: $("modalLastname").value,
-      pseudo: $("modalPseudo").value,
-      class_name: $("modalClass").value
+      firstname: $("modalFirstname").value || "",
+      lastname: $("modalLastname").value || "",
+      pseudo: $("modalPseudo").value || email.split("@")[0],
+      class_name: $("modalClass").value || "",
+      role: "user"
     });
 
     if (profileError) {
@@ -1015,10 +1006,8 @@ $("modalSignup").onclick = async () => {
   }
 };
 
-/* Fermeture de la modale d'aperçu */
 $("closePreview").onclick = () => $("previewModal").classList.add("hidden");
 
-/* Lancement de l'application */
 refreshUser();
 </script>
 </body>
