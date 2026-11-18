@@ -520,7 +520,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
   </main>
 </div>
 
-<!-- Modale de Sanction (Kick / Ban avec choix de durée) -->
+<!-- Modale de Sanction (Kick / Ban avec durée personnalisée) -->
 <div id="sanctionModal" class="modal-backdrop hidden">
   <div class="modal-window">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -542,8 +542,25 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
         <option value="24h">24 heures</option>
         <option value="7d">7 jours</option>
         <option value="30d">30 jours</option>
+        <option value="custom">⚙️ Personnalisée (durée libre)</option>
         <option value="permanent">Permanent (Indéfini)</option>
       </select>
+    </div>
+
+    <!-- Champ de durée personnalisée (masqué par défaut) -->
+    <div id="customDurationBox" class="hidden" style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
+      <div>
+        <label><small>Valeur</small></label>
+        <input id="customDurationValue" type="number" min="1" value="1" placeholder="Ex: 3">
+      </div>
+      <div>
+        <label><small>Unité</small></label>
+        <select id="customDurationUnit">
+          <option value="minutes">Minutes</option>
+          <option value="hours">Heures</option>
+          <option value="days" selected>Jours</option>
+        </select>
+      </div>
     </div>
 
     <label><small>Motif personnalisé de la sanction (affiché sur le site)</small></label>
@@ -887,9 +904,7 @@ async function refreshUser() {
   }
 
   if (profile && profile.status === 'banned') {
-    // Vérifier si le ban temporaire est expiré
     if (profile.ban_expires_at && new Date() > new Date(profile.ban_expires_at)) {
-      // Débannissement automatique si la durée est expirée
       await db.from("profiles").update({ status: 'active', ban_reason: null, ban_expires_at: null }).eq("id", profile.id);
       profile.status = 'active';
     } else {
@@ -1579,6 +1594,8 @@ function renderAdminView() {
       $("targetUserId").value = uid;
       $("sanctionModalTitle").textContent = `⚖️ Sanctionner : ${name}`;
       $("sanctionReason").value = "";
+      $("banDuration").value = "1h";
+      $("customDurationBox").classList.add("hidden");
       $("sanctionModal").classList.remove("hidden");
     };
   });
@@ -1598,6 +1615,12 @@ function renderAdminView() {
 $("sanctionType").onchange = () => {
   const isBan = $("sanctionType").value === "ban";
   $("banDurationBox").style.display = isBan ? "block" : "none";
+  $("customDurationBox").classList.add("hidden");
+};
+
+$("banDuration").onchange = () => {
+  const val = $("banDuration").value;
+  $("customDurationBox").classList.toggle("hidden", val !== "custom");
 };
 
 $("closeSanctionModal").onclick = () => $("sanctionModal").classList.add("hidden");
@@ -1619,14 +1642,27 @@ $("confirmSanctionBtn").onclick = async () => {
     let expiresAt = null;
     const now = new Date();
 
-    if (durationOption === "1h") now.setHours(now.getHours() + 1);
-    else if (durationOption === "24h") now.setHours(now.getHours() + 24);
-    else if (durationOption === "7d") now.setDate(now.getDate() + 7);
-    else if (durationOption === "30d") now.setDate(now.getDate() + 30);
-    else if (durationOption === "permanent") expiresAt = null;
-
-    if (durationOption !== "permanent") {
+    if (durationOption === "1h") {
+      now.setHours(now.getHours() + 1);
       expiresAt = now.toISOString();
+    } else if (durationOption === "24h") {
+      now.setHours(now.getHours() + 24);
+      expiresAt = now.toISOString();
+    } else if (durationOption === "7d") {
+      now.setDate(now.getDate() + 7);
+      expiresAt = now.toISOString();
+    } else if (durationOption === "30d") {
+      now.setDate(now.getDate() + 30);
+      expiresAt = now.toISOString();
+    } else if (durationOption === "custom") {
+      const customQty = parseInt($("customDurationValue").value) || 1;
+      const customUnit = $("customDurationUnit").value;
+      if (customUnit === "minutes") now.setMinutes(now.getMinutes() + customQty);
+      else if (customUnit === "hours") now.setHours(now.getHours() + customQty);
+      else if (customUnit === "days") now.setDate(now.getDate() + customQty);
+      expiresAt = now.toISOString();
+    } else if (durationOption === "permanent") {
+      expiresAt = null;
     }
 
     const { error } = await db.from("profiles").update({ 
@@ -1654,10 +1690,8 @@ $("modalLogin").onclick = async () => {
   if (error || !data) return say("❌ Pseudo introuvable.");
 
   if (data.status === 'banned') {
-    // Vérifier si la durée du ban est passée
     if (data.ban_expires_at && new Date() > new Date(data.ban_expires_at)) {
       await db.from("profiles").update({ status: 'active', ban_reason: null, ban_expires_at: null }).eq("id", data.id);
-      // Connexion autorisée car le ban a expiré
       localStorage.setItem("cs_user_id", data.id);
       say("✅ Ton bannissement a expiré. Bon retour, " + data.pseudo + " !");
       $("authModal").classList.add("hidden");
