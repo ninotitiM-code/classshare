@@ -321,8 +321,11 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
   <div id="navMember" class="side-item hidden" data-view="member">
     <span class="side-left">👤 <span>Mon profil & classe</span></span>
   </div>
+  <div id="navMessages" class="side-item hidden" data-view="messages">
+    <span class="side-left">💬 <span>Messagerie privée</span></span>
+  </div>
   <div id="navAdmin" class="side-item hidden" data-view="admin">
-    <span class="side-left" id="adminNavLabel">⚙️ <span>Modération & Admin</span></span>
+    <span class="side-left" id="adminNavLabel">⚙️ <span>Panel Staff & Admin</span></span>
   </div>
 
   <div class="nav-label" style="margin-top:10px">Dossiers partagés</div>
@@ -433,12 +436,35 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       <div id="memberContent"></div>
     </div>
 
-    <!-- VUE 4 : ADMINISTRATION & MODÉRATION -->
+    <!-- VUE 4 : MESSAGERIE PRIVÉE -->
+    <div id="viewMessages" class="hidden">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">💬 Messagerie & Messages Staff</h2>
+          <p class="page-sub">Envoie et reçois des messages privés ou des avertissements de la modération</p>
+        </div>
+        <button class="sec-btn" data-back>← Retour</button>
+      </div>
+      <div class="panel-card">
+        <h3>Envoyer un message direct</h3>
+        <label><small>Destinataire</small></label>
+        <select id="msgRecipient"></select>
+        <label><small>Votre message</small></label>
+        <textarea id="msgContent" rows="3" placeholder="Écris ton message ici..."></textarea>
+        <button id="sendMsgBtn" class="primary-btn" style="margin-top:8px">Envoyer le message</button>
+      </div>
+      <div class="panel-card">
+        <h3>Boîte de réception</h3>
+        <div id="messagesList"></div>
+      </div>
+    </div>
+
+    <!-- VUE 5 : PANEL STAFF & ADMIN -->
     <div id="viewAdmin" class="hidden">
       <div class="page-header">
         <div>
-          <h2 class="page-title">Espace Modération & Administration</h2>
-          <p class="page-sub">Gère l'ensemble des contenus, des dossiers et des rôles de la plateforme</p>
+          <h2 class="page-title">⚙️ Panel Staff & Modération</h2>
+          <p class="page-sub">Gère les membres (Kick, Ban, Rôles), les dossiers et les contenus</p>
         </div>
         <button class="sec-btn" data-back>← Retour</button>
       </div>
@@ -447,7 +473,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
   </main>
 </div>
 
-<!-- Modale de connexion / inscription sécurisée par mot de passe -->
+<!-- Modale de connexion / inscription -->
 <div id="authModal" class="modal-backdrop hidden">
   <div class="modal-window">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -509,6 +535,7 @@ let profile = null;
 let folders = [];
 let docs = [];
 let allProfiles = [];
+let messages = [];
 let settings = {
   site_title: "ClassShare",
   site_subtitle: "Espace collaboratif",
@@ -753,6 +780,7 @@ async function refreshUser() {
   }
 
   $("navMember").classList.toggle("hidden", !profile);
+  $("navMessages").classList.toggle("hidden", !profile);
   $("navAdmin").classList.toggle("hidden", !staff());
   $("onlyMineLabel").classList.toggle("hidden", !profile);
   $("quickUploadBtn").classList.toggle("hidden", !profile);
@@ -768,15 +796,17 @@ async function refreshUser() {
 }
 
 async function loadData() {
-  const [fRes, dRes, pRes] = await Promise.all([
+  const [fRes, dRes, pRes, mRes] = await Promise.all([
     db.from("folders").select("*").order("name"),
     db.from("documents").select("*").order("created_at", { ascending: false }),
-    staff() ? db.from("profiles").select("*") : Promise.resolve({ data: [] })
+    db.from("profiles").select("*"),
+    profile ? db.from("messages").select("*").or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id}`).order("created_at", { ascending: false }) : Promise.resolve({ data: [] })
   ]);
 
   folders = fRes.data || [];
   docs = dRes.data || [];
   allProfiles = pRes.data || [];
+  messages = mRes.data || [];
 
   renderSidebarFolders();
   renderDestinationOptions();
@@ -790,10 +820,12 @@ function switchView(view) {
   $("viewLibrary").classList.toggle("hidden", view !== "library");
   $("viewAdd").classList.toggle("hidden", view !== "add");
   $("viewMember").classList.toggle("hidden", view !== "member");
+  $("viewMessages").classList.toggle("hidden", view !== "messages");
   $("viewAdmin").classList.toggle("hidden", view !== "admin");
 
   if (view === "library") render();
   if (view === "member") renderMemberView();
+  if (view === "messages") renderMessagesView();
   if (view === "admin") renderAdminView();
 }
 
@@ -816,11 +848,15 @@ $("sideNewBtn").onclick = () => {
 $("navAll").onclick = () => { selectedFolder = "ALL"; switchView("library"); };
 $("navFavs").onclick = () => { selectedFolder = "FAVS"; switchView("library"); };
 $("navMember").onclick = () => switchView("member");
+$("navMessages").onclick = () => switchView("messages");
 $("navAdmin").onclick = () => switchView("admin");
 
 function renderSidebarFolders() {
   $("countAll").textContent = docs.length;
   $("countFavs").textContent = getFavs().length;
+
+  $("navAll").classList.toggle("active", selectedFolder === "ALL");
+  $("navFavs").classList.toggle("active", selectedFolder === "FAVS");
 
   let html = "";
   for (const f of folders) {
@@ -838,6 +874,7 @@ function renderSidebarFolders() {
     el.onclick = () => {
       selectedFolder = el.dataset.folderId;
       switchView("library");
+      renderSidebarFolders();
     };
   });
 }
@@ -978,6 +1015,7 @@ $("publish").onclick = async () => {
 
   if (!title) return say("⚠️ Le titre est obligatoire");
   if (!folder_id) return say("⚠️ Sélectionne un dossier de destination");
+  if (!content && !selectedFile) return say("⚠️ Ajoute du texte ou un fichier à publier");
 
   $("uploadStatusText").textContent = "Publication en cours...";
   $("uploadProgress").classList.remove("hidden");
@@ -1046,9 +1084,7 @@ function renderMemberView() {
       class_name: $("myClass").value.trim()
     };
     const newPass = $("myPassword").value.trim();
-    if (newPass) {
-      updates.password = newPass;
-    }
+    if (newPass) updates.password = newPass;
 
     const { error } = await db.from("profiles").update(updates).eq("id", profile.id);
     if (error) say("Erreur : " + error.message);
@@ -1064,6 +1100,49 @@ function renderMemberView() {
     say("Déconnecté");
     await refreshUser();
     switchView("library");
+  };
+}
+
+function renderMessagesView() {
+  let recipientHtml = "";
+  for (const p of allProfiles) {
+    if (p.id !== profile.id) {
+      recipientHtml += `<option value="${p.id}">${safe(p.pseudo || p.firstname)} (${safe(p.role)})</option>`;
+    }
+  }
+  $("msgRecipient").innerHTML = recipientHtml || "<option>Aucun autre membre</option>";
+
+  let msgListHtml = "";
+  for (const m of messages) {
+    const sender = allProfiles.find(x => x.id === m.sender_id)?.pseudo || "Inconnu";
+    const recipient = allProfiles.find(x => x.id === m.recipient_id)?.pseudo || "Inconnu";
+    msgListHtml += `
+      <div class="list-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <div style="font-size:11.5px;color:var(--muted)">De <strong>${safe(sender)}</strong> vers <strong>${safe(recipient)}</strong> • ${formatDate(m.created_at)}</div>
+        <div style="font-size:13.5px">${safe(m.content)}</div>
+      </div>
+    `;
+  }
+  $("messagesList").innerHTML = msgListHtml || "<p>Aucun message.</p>";
+
+  $("sendMsgBtn").onclick = async () => {
+    const recipient_id = $("msgRecipient").value;
+    const content = $("msgContent").value.trim();
+    if (!content) return say("⚠️ Écris un message");
+
+    const { error } = await db.from("messages").insert({
+      sender_id: profile.id,
+      recipient_id,
+      content
+    });
+
+    if (error) say("Erreur : " + error.message);
+    else {
+      say("✅ Message envoyé !");
+      $("msgContent").value = "";
+      await loadData();
+      renderMessagesView();
+    }
   };
 }
 
@@ -1098,7 +1177,7 @@ function renderAdminView() {
     </div>
 
     <div class="panel-card">
-      <h3>Gestion des membres & rôles</h3>
+      <h3>🛠️ Panel de modération des membres (Kick / Ban / Rôles)</h3>
       <div id="adminUserList"></div>
     </div>
 
@@ -1122,6 +1201,7 @@ function renderAdminView() {
       say("✅ Dossier créé !");
       $("newFolderName").value = "";
       await loadData();
+      renderAdminView();
     }
   };
 
@@ -1141,7 +1221,7 @@ function renderAdminView() {
       if (!confirm("Supprimer ce dossier et son contenu associé ?")) return;
       const { error } = await db.from("folders").delete().eq("id", btn.dataset.delfolder);
       if (error) say("Erreur : " + error.message);
-      else { say("Dossier supprimé"); await loadData(); }
+      else { say("Dossier supprimé"); await loadData(); renderAdminView(); }
     };
   });
 
@@ -1149,12 +1229,17 @@ function renderAdminView() {
   for (const p of allProfiles) {
     uHtml += `
       <div class="list-row">
-        <span>👤 <strong>${safe(p.pseudo || p.firstname || p.id)}</strong> <small>${safe(p.class_name || "")}</small></span>
-        <select data-roleuid="${p.id}">
-          <option value="member" ${p.role === "member" ? "selected" : ""}>Membre</option>
-          <option value="moderator" ${p.role === "moderator" ? "selected" : ""}>Modérateur</option>
-          <option value="admin" ${p.role === "admin" ? "selected" : ""}>Administrateur</option>
-        </select>
+        <div>
+          <strong>👤 ${safe(p.pseudo || p.firstname)}</strong> <small>(${safe(p.class_name || "Sans classe")})</small>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select data-roleuid="${p.id}">
+            <option value="member" ${p.role === "member" ? "selected" : ""}>Membre</option>
+            <option value="moderator" ${p.role === "moderator" ? "selected" : ""}>Modérateur</option>
+            <option value="admin" ${p.role === "admin" ? "selected" : ""}>Administrateur</option>
+          </select>
+          <button class="danger-btn" data-kickuid="${p.id}" style="padding:5px 10px;font-size:11px">Kick / Supprimer</button>
+        </div>
       </div>
     `;
   }
@@ -1167,6 +1252,22 @@ function renderAdminView() {
       const { error } = await db.from("profiles").update({ role }).eq("id", uid);
       if (error) say("Erreur : " + error.message);
       else say("✅ Rôle mis à jour");
+    };
+  });
+
+  document.querySelectorAll("[data-kickuid]").forEach(btn => {
+    btn.onclick = async () => {
+      const uid = btn.dataset.kickuid;
+      if (uid === profile.id) return say("⚠️ Tu ne peux pas te supprimer toi-même !");
+      if (!confirm("Voulez-vous vraiment expulser/supprimer ce membre ?")) return;
+
+      const { error } = await db.from("profiles").delete().eq("id", uid);
+      if (error) say("Erreur : " + error.message);
+      else {
+        say("👢 Membre expulsé avec succès !");
+        await loadData();
+        renderAdminView();
+      }
     };
   });
 
@@ -1184,18 +1285,14 @@ function renderAdminView() {
 
 $("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
 
-/* Connexion sécurisée par Pseudo + Mot de passe */
 $("modalLogin").onclick = async () => {
   const pseudo = $("modalPseudo").value.trim();
   const password = $("modalPassword").value;
   if (!pseudo || !password) return say("⚠️ Entre ton pseudo et ton mot de passe");
 
   const { data, error } = await db.from("profiles").select("*").ilike("pseudo", pseudo).maybeSingle();
-  if (error || !data) {
-    return say("❌ Pseudo introuvable.");
-  }
+  if (error || !data) return say("❌ Pseudo introuvable.");
 
-  // Vérification du mot de passe stocké
   if (data.password && data.password !== password) {
     return say("❌ Mot de passe incorrect !");
   }
@@ -1207,7 +1304,6 @@ $("modalLogin").onclick = async () => {
   await loadData();
 };
 
-/* Inscription sécurisée par Pseudo + Mot de passe */
 $("modalSignup").onclick = async () => {
   const pseudo = $("modalPseudo").value.trim();
   const password = $("modalPassword").value;
@@ -1220,7 +1316,7 @@ $("modalSignup").onclick = async () => {
   const { error } = await db.from("profiles").insert({
     id: newId,
     pseudo: pseudo,
-    password: password, // Sauvegarde sécurisée du mot de passe dans la table profiles
+    password: password,
     firstname: $("modalFirstname").value.trim() || pseudo,
     lastname: $("modalLastname").value.trim() || "",
     class_name: $("modalClass").value.trim() || "",
