@@ -616,7 +616,7 @@ let settings = {
   theme_color: "#2563eb"
 };
 let activeView = "library";
-let activeChatSubView = "public"; // 'public' ou 'private'
+let activeChatSubView = "public";
 let selectedFolder = "ALL";
 let toastTimer = null;
 
@@ -1261,10 +1261,6 @@ function renderChat() {
     btn.onclick = async () => {
       const { error } = await db.from("discord_messages").delete().eq("id", btn.dataset.delchat);
       if (error) say("Erreur : " + error.message);
-      else {
-        chatMessages = chatMessages.filter(x => x.id !== btn.dataset.delchat);
-        renderChat();
-      }
     };
   });
 }
@@ -1356,10 +1352,6 @@ function renderPrivateMessages() {
     btn.onclick = async () => {
       const { error } = await db.from("private_messages").delete().eq("id", btn.dataset.delpm);
       if (error) say("Erreur : " + error.message);
-      else {
-        privateMessages = privateMessages.filter(x => x.id !== btn.dataset.delpm);
-        renderPrivateMessages();
-      }
     };
   });
 }
@@ -1382,7 +1374,7 @@ $("pmSendBtn").onclick = sendPrivateMessage;
 $("pmInput").onkeydown = e => { if (e.key === "Enter") sendPrivateMessage(); };
 
 
-/* TEMPS RÉEL SUPABASE (Chat public et MP) */
+/* TEMPS RÉEL SUPABASE CORRIGÉ ET ACTIF */
 db.channel('realtime-all-messages')
   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'discord_messages' }, payload => {
     if (!chatMessages.some(m => m.id === payload.new.id)) {
