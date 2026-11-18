@@ -123,6 +123,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);lin
 .side-item:hover{background:var(--bg)}
 .side-item.active{background:var(--primary-soft);color:var(--primary);font-weight:700}
 body.dark .side-item.active{color:#93c5fd}
+.side-item.dragover{border:2px dashed var(--primary);background:var(--primary-soft);transform:scale(1.02)}
 .side-left{display:flex;align-items:center;gap:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .folder-tag-badge{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--primary-soft);color:var(--primary);margin-left:4px}
 body.dark .folder-tag-badge{color:#93c5fd}
@@ -143,7 +144,7 @@ body.dark .folder-tag-badge{color:#93c5fd}
   z-index:90;
   flex-wrap:wrap;
 }
-.collapse-btn{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:7px 10px;border-radius:8px;font-size:14px;cursor:pointer}
+.mobile-menu-btn,.collapse-btn{display:none;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:7px 10px;border-radius:8px;font-size:14px;cursor:pointer}
 
 .search-wrap{position:relative;flex:1;max-width:420px;min-width:180px}
 .search-wrap input{
@@ -173,6 +174,7 @@ body.dark .folder-tag-badge{color:#93c5fd}
 body.dark .user-badge{color:#93c5fd}
 
 .content-area{padding:22px;max-width:1240px;width:100%;margin:0 auto;flex:1}
+.content-area.dragover-area{outline:2px dashed var(--primary);outline-offset:-8px;background:var(--primary-soft);border-radius:var(--radius)}
 
 .page-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:18px}
 .page-title{margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em}
@@ -226,6 +228,7 @@ body.dark .user-badge{color:#93c5fd}
 
 .doc-title{font-weight:700;font-size:14px;line-height:1.35;color:var(--text);word-break:break-word}
 .doc-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
+.doc-class-pill{display:inline-block;font-size:10px;font-weight:700;background:var(--border);color:var(--text);padding:1px 5px;border-radius:4px;margin-left:4px}
 .doc-folder-badge{display:inline-block;font-size:10.5px;font-weight:700;background:var(--primary-soft);color:var(--primary);padding:2px 7px;border-radius:6px;margin-top:5px}
 body.dark .doc-folder-badge{color:#93c5fd}
 
@@ -249,6 +252,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary)
 button.primary-btn{background:var(--primary);color:white;border:0;padding:10px 16px;border-radius:9px;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
 button.primary-btn:hover{background:var(--primary-hover)}
 button.sec-btn{background:var(--bg);color:var(--text);border:1px solid var(--border);padding:9px 14px;border-radius:9px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;border-radius:7px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
 
 .dropzone{border:2px dashed var(--border);background:var(--bg);padding:26px 18px;text-align:center;border-radius:var(--radius);margin:8px 0 14px;cursor:pointer;color:var(--muted);transition:.15s}
 .dropzone:hover,.dropzone.dragover{border-color:var(--primary);background:var(--primary-soft);color:var(--text)}
@@ -268,20 +272,30 @@ button.sec-btn{background:var(--bg);color:var(--text);border:1px solid var(--bor
 .modal-head{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--border)}
 .modal-body{padding:14px;overflow:auto;text-align:center}
 .modal-body img{max-width:100%;max-height:74vh;border-radius:8px}
+.modal-body iframe{width:100%;height:74vh;border:0;border-radius:8px}
 
 .toast{position:fixed;bottom:20px;right:20px;background:#0f172a;color:white;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 10px 25px rgba(0,0,0,.3);z-index:1100;border-left:4px solid var(--primary);animation:pop .2s ease}
 @keyframes pop{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
 
 .hidden{display:none!important}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:110}
+
+@media (min-width: 821px) {
+  .collapse-btn{display:inline-flex}
+}
 @media (max-width: 820px) {
-  .sidebar{position:sticky;left:auto;top:0;transform:none;width:220px;padding:14px 10px}
-  .sidebar.collapsed{width:64px;padding:14px 6px}
+  .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.open{display:block}
+  .mobile-menu-btn{display:inline-flex}
   .topbar{padding:10px 14px}
   .content-area{padding:16px}
 }
 </style>
 </head>
 <body>
+
+<div id="sidebarOverlay" class="sidebar-overlay"></div>
 
 <aside id="sidebar" class="sidebar">
   <div class="brand">
@@ -319,10 +333,11 @@ button.sec-btn{background:var(--bg);color:var(--text);border:1px solid var(--bor
 <div class="workspace">
   <header class="topbar">
     <div style="display:flex;align-items:center;gap:10px;flex:1">
+      <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
       <button id="collapseBtn" class="collapse-btn" title="Réduire la barre latérale">◀</button>
       <div class="search-wrap">
         <span>🔎</span>
-        <input id="search" placeholder="Rechercher un cours, un auteur, une classe...">
+        <input id="search" placeholder="Rechercher un cours, un auteur, une classe... (Ctrl+K)">
       </div>
     </div>
 
@@ -342,650 +357,1014 @@ button.sec-btn{background:var(--bg);color:var(--text);border:1px solid var(--bor
     </div>
   </header>
 
-  <main class="content-area" id="contentArea">
-    <section id="libraryView">
+  <main id="dropArea" class="content-area">
+    <div id="uploadProgress" class="upload-progress hidden">
+      <strong id="uploadStatusText">Envoi du fichier en cours...</strong>
+      <div class="progress-track"><div class="progress-fill"></div></div>
+    </div>
+
+    <!-- VUE 1 : BIBLIOTHÈQUE -->
+    <div id="viewLibrary">
       <div class="page-header">
         <div>
-          <h2 class="page-title" id="pageTitle">Tous les fichiers</h2>
-          <p class="page-sub" id="pageSub">Chargement...</p>
+          <h2 id="pageTitle" class="page-title">Tous les fichiers</h2>
+          <p id="pageSub" class="page-sub">Glisse un fichier n'importe où sur cette page pour l'ajouter directement</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button id="quickUploadBtn" class="primary-btn hidden">📎 Déposer un fichier</button>
+          <input id="quickFileInput" type="file" multiple class="hidden">
         </div>
       </div>
 
       <div class="filter-bar">
         <select id="sortOrder">
-          <option value="newest">Plus récents</option>
-          <option value="oldest">Plus anciens</option>
-          <option value="alpha">Ordre alphabétique</option>
-          <option value="size">Taille du fichier</option>
+          <option value="newest">🕒 Plus récents</option>
+          <option value="oldest">📅 Plus anciens</option>
+          <option value="alpha">🔤 Ordre alphabétique</option>
+          <option value="size">⚖️ Plus volumineux</option>
         </select>
-        <label class="chip-check"><input type="checkbox" id="onlyMine"> Mes publications</label>
-      </div>
-
-      <div id="uploadProgress" class="upload-progress hidden">
-        <strong id="uploadStatusText">Publication en cours...</strong>
-        <div class="progress-track"><div class="progress-fill"></div></div>
+        <label id="onlyMineLabel" class="chip-check hidden">
+          <input type="checkbox" id="onlyMine"> 👤 Mes partages uniquement
+        </label>
       </div>
 
       <div id="documents"></div>
-    </section>
+    </div>
 
-    <section id="addView" class="hidden">
+    <!-- VUE 2 : PUBLIER -->
+    <div id="viewAdd" class="hidden">
       <div class="page-header">
         <div>
-          <h2 class="page-title">Nouveau partage</h2>
-          <p class="page-sub">Publie un document ou partage des notes avec ta classe.</p>
+          <h2 class="page-title">Publier une ressource</h2>
+          <p class="page-sub">Partage un fichier ou rédige une note pour la communauté</p>
         </div>
+        <button class="sec-btn" data-back>← Retour</button>
       </div>
+
       <div class="panel-card">
-        <h3>Publier une ressource</h3>
-        <label for="title">Titre</label>
-        <input id="title" placeholder="Ex : Fiche de révision de maths">
-        <label for="destination">Dossier de destination</label>
+        <label><small>Dossier de destination</small></label>
         <select id="destination"></select>
-        <label for="content">Description ou contenu (facultatif)</label>
-        <textarea id="content" rows="5" placeholder="Ajoute une description ou des notes..."></textarea>
-        <label>Fichier (facultatif)</label>
-        <div class="dropzone" id="dropZone">
-          <div style="font-size:30px">📤</div>
-          <strong>Glisse ton fichier ici ou clique pour parcourir</strong>
-          <p style="font-size:12px;margin:5px 0">PDF, images, documents, feuilles de calcul...</p>
-          <input type="file" id="fileInput" style="display:none">
-          <div id="selectedFileName" style="font-size:12px;font-weight:700;color:var(--primary)"></div>
-        </div>
-        <button class="primary-btn" id="publish">Publier la ressource</button>
-        <button class="sec-btn" id="cancelAdd">Annuler</button>
-      </div>
-    </section>
 
-    <section id="memberView" class="hidden">
+        <label><small>Titre de la ressource</small></label>
+        <input id="title" placeholder="Ex : Fiche de révision - Chapitre 3">
+
+        <label><small>Texte ou notes (optionnel - s'affichera directement dans la carte)</small></label>
+        <textarea id="content" rows="6" placeholder="Écris ton cours, tes notes ou colle un résumé ici..."></textarea>
+
+        <label><small>Fichier joint (optionnel)</small></label>
+        <div id="dropZone" class="dropzone">
+          📎 <strong>Glisse ton fichier ici</strong> ou clique pour parcourir ton appareil (PDF, Image, Word...)
+          <input id="fileInput" type="file" class="hidden">
+          <div id="selectedFileName" style="margin-top:8px;font-weight:700;color:var(--primary)"></div>
+        </div>
+
+        <button id="publish" class="primary-btn">🚀 Publier maintenant</button>
+      </div>
+    </div>
+
+    <!-- VUE 3 : ESPACE MEMBRE -->
+    <div id="viewMember" class="hidden">
       <div class="page-header">
         <div>
-          <h2 class="page-title">Mon profil</h2>
-          <p class="page-sub">Gère tes informations et ta classe.</p>
+          <h2 class="page-title">Mon profil et ma classe</h2>
+          <p class="page-sub">Gère tes informations personnelles et tes publications</p>
         </div>
+        <button class="sec-btn" data-back>← Retour</button>
       </div>
-      <div class="panel-card">
-        <h3>Informations personnelles</h3>
-        <label>Prénom</label><input id="myFirstname">
-        <label>Nom</label><input id="myLastname">
-        <label>Pseudo</label><input id="myPseudo">
-        <label>Classe</label><input id="myClass" placeholder="Ex : 3e B">
-        <div style="display:flex;gap:10px;margin-top:8px">
-          <button class="primary-btn" id="saveMyProfile">Enregistrer mon profil</button>
-          <button class="sec-btn" id="logoutBtn" style="color:#dc2626">Se déconnecter</button>
-        </div>
-      </div>
-    </section>
+      <div id="memberContent"></div>
+    </div>
 
-    <section id="adminView" class="hidden">
+    <!-- VUE 4 : ADMINISTRATION & MODÉRATION -->
+    <div id="viewAdmin" class="hidden">
       <div class="page-header">
         <div>
-          <h2 class="page-title">Modération & Administration</h2>
-          <p class="page-sub">Gère les ressources, les membres et les dossiers.</p>
+          <h2 class="page-title">Espace Modération & Administration</h2>
+          <p class="page-sub">Gère l'ensemble des contenus, des dossiers et des rôles de la plateforme</p>
         </div>
+        <button class="sec-btn" data-back>← Retour</button>
       </div>
-
-      <div class="stats-row">
-        <div class="stat-box"><strong id="statDocs">0</strong><span>Ressources</span></div>
-        <div class="stat-box"><strong id="statUsers">0</strong><span>Membres</span></div>
-        <div class="stat-box"><strong id="statFolders">0</strong><span>Dossiers</span></div>
-      </div>
-
-      <div class="panel-card">
-        <h3>Créer un dossier</h3>
-        <input id="newFolder" placeholder="Nom du dossier">
-        <select id="newFolderTag">
-          <option value="Cours">Cours</option>
-          <option value="Exercices">Exercices</option>
-          <option value="Examens">Examens</option>
-          <option value="Projets">Projets</option>
-          <option value="Autre">Autre</option>
-        </select>
-        <button class="primary-btn" id="createFolder">Créer le dossier</button>
-      </div>
-
-      <div class="panel-card">
-        <h3>Gestion des dossiers</h3>
-        <div id="adminFolders"></div>
-      </div>
-
-      <div class="panel-card">
-        <h3>Gestion des membres</h3>
-        <div id="adminUsers"></div>
-      </div>
-
-      <div class="panel-card">
-        <h3>Paramètres du site</h3>
-        <label>Nom du site</label><input id="cfgTitle">
-        <label>Sous-titre</label><input id="cfgSubtitle">
-        <button class="primary-btn" id="saveSettings">Enregistrer les paramètres</button>
-      </div>
-    </section>
+      <div id="management"></div>
+    </div>
   </main>
 </div>
 
+<!-- Modale de connexion / inscription -->
 <div id="authModal" class="modal-backdrop hidden">
   <div class="modal-window">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h2 style="margin:0;font-size:18px">Connexion / Inscription</h2>
-      <button class="mini-btn" id="closeAuthModal">✕</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h2 style="margin:0;font-size:18px">🔐 Compte ClassShare</h2>
+      <button id="closeAuthModal" class="mini-btn">✕</button>
     </div>
-    <p style="font-size:12px;color:var(--muted)">Connecte-toi ou crée ton compte.</p>
-    <label>E-mail</label><input id="modalEmail" type="email" placeholder="adresse@email.com">
-    <label>Mot de passe</label><input id="modalPassword" type="password" placeholder="Mot de passe">
-    <label>Prénom (pour l'inscription)</label><input id="modalFirstname" placeholder="Prénom">
-    <label>Nom (pour l'inscription)</label><input id="modalLastname" placeholder="Nom">
-    <label>Pseudo (pour l'inscription)</label><input id="modalPseudo" placeholder="Pseudo">
-    <label>Classe (pour l'inscription)</label><input id="modalClass" placeholder="Ex : 3e B">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-      <button class="primary-btn" id="modalLogin">Se connecter</button>
-      <button class="sec-btn" id="modalSignup">Créer un compte</button>
+    <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted)">Renseigne tes informations pour configurer ton profil.</p>
+    <input id="modalEmail" type="email" placeholder="Adresse e-mail">
+    <input id="modalPassword" type="password" placeholder="Mot de passe (8 caractères min.)">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <input id="modalFirstname" placeholder="Prénom" style="margin:5px 0 10px">
+      <input id="modalLastname" placeholder="Nom" style="margin:5px 0 10px">
+    </div>
+    <input id="modalPseudo" placeholder="Pseudo (affiché publiquement)">
+    <input id="modalClass" placeholder="Classe (ex: Terminale S, 2nde 3...)">
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button id="modalLogin" class="primary-btn" style="flex:1">Se connecter</button>
+      <button id="modalSignup" class="sec-btn" style="flex:1">Créer un compte</button>
     </div>
   </div>
 </div>
 
+<!-- Modale d'aperçu -->
 <div id="previewModal" class="modal-backdrop hidden">
   <div class="modal-window large">
     <div class="modal-head">
       <strong id="previewTitle">Aperçu</strong>
-      <button class="mini-btn" id="closePreview">✕ Fermer</button>
+      <button id="closePreview" class="danger-btn">✕ Fermer</button>
     </div>
-    <div class="modal-body" id="previewBody"></div>
+    <div id="previewBody" class="modal-body"></div>
   </div>
 </div>
 
-<div id="toastArea"></div>
+<div id="toast" class="toast hidden"></div>
 
 <script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const SUPABASE_URL = "https://twzeosslphrqprfpcxxv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_uknnIKbDO6PvOQxoOHDKIA_3HAWkR6h";
 const BUCKET = "classshare-files";
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const $ = id => document.getElementById(id);
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let user = null;
 let profile = null;
-let docs = [];
 let folders = [];
-let users = [];
-let settings = {};
+let docs = [];
+let allProfiles = [];
+let settings = {
+  site_title: "ClassShare",
+  site_subtitle: "Espace collaboratif",
+  theme_color: "#2563eb"
+};
 let activeView = "library";
 let selectedFolder = "ALL";
-let listView = false;
+let pendingFile = null;
+let toastTimer = null;
 
-function safe(value) {
-  return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  }[char]));
+const $ = id => document.getElementById(id);
+
+function say(msg) {
+  const el = $("toast");
+  el.textContent = msg;
+  el.classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add("hidden"), 4000);
 }
 
-function say(message) {
-  const toast = document.createElement("div");
-  toast.className = "toast";
-  toast.textContent = message;
-  $("toastArea").appendChild(toast);
-  setTimeout(() => toast.remove(), 3500);
+$("mobileMenuBtn").onclick = () => {
+  $("sidebar").classList.add("open");
+  $("sidebarOverlay").classList.add("open");
+};
+$("sidebarOverlay").onclick = () => {
+  $("sidebar").classList.remove("open");
+  $("sidebarOverlay").classList.remove("open");
+};
+function closeMobileMenu() {
+  $("sidebar").classList.remove("open");
+  $("sidebarOverlay").classList.remove("open");
+}
+
+$("collapseBtn").onclick = () => {
+  const isCollapsed = $("sidebar").classList.toggle("collapsed");
+  localStorage.setItem("cs_collapsed", isCollapsed ? "1" : "0");
+  $("collapseBtn").textContent = isCollapsed ? "▶" : "◀";
+};
+if (localStorage.getItem("cs_collapsed") === "1") {
+  $("sidebar").classList.add("collapsed");
+  $("collapseBtn").textContent = "▶";
+}
+
+window.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    switchView("library");
+    $("search").focus();
+  }
+});
+
+function getFavs() {
+  try { return JSON.parse(localStorage.getItem("cs_favs") || "[]"); }
+  catch { return []; }
+}
+function toggleFav(docId) {
+  const favs = getFavs();
+  const idx = favs.indexOf(docId);
+  if (idx >= 0) { favs.splice(idx, 1); say("Retiré des favoris"); }
+  else { favs.push(docId); say("⭐ Ajouté aux favoris"); }
+  localStorage.setItem("cs_favs", JSON.stringify(favs));
+  render();
+}
+
+const STYLES = ["default", "rounded", "compact"];
+const STYLE_LABELS = { default: "✨ Standard", rounded: "🫧 Arrondi", compact: "📐 Compact" };
+
+function applyPersonalPrefs() {
+  const theme = localStorage.getItem("cs_theme") || "default";
+  const style = localStorage.getItem("cs_style") || "default";
+  const isDark = localStorage.getItem("cs_dark") === "1";
+  const isList = localStorage.getItem("cs_list") === "1";
+
+  document.body.classList.remove("theme-emerald", "theme-purple", "theme-coral", "theme-pink", "theme-cyan");
+  if (theme !== "default") document.body.classList.add("theme-" + theme);
+
+  document.querySelectorAll("[data-theme]").forEach(b => {
+    b.classList.toggle("active", b.dataset.theme === theme);
+  });
+
+  document.body.classList.remove("style-rounded", "style-compact");
+  if (style !== "default") document.body.classList.add("style-" + style);
+  $("btnStyle").textContent = STYLE_LABELS[style] || "✨ Standard";
+
+  document.body.classList.toggle("dark", isDark);
+  $("btnDark").classList.toggle("active", isDark);
+  $("btnDark").textContent = isDark ? "☀️ Clair" : "🌙 Sombre";
+
+  $("documents").classList.toggle("list-view", isList);
+  $("btnView").classList.toggle("active", isList);
+  $("btnView").textContent = isList ? "⊞ Grille" : "☰ Liste";
+}
+
+document.querySelectorAll("[data-theme]").forEach(btn => {
+  btn.onclick = () => {
+    localStorage.setItem("cs_theme", btn.dataset.theme);
+    applyPersonalPrefs();
+  };
+});
+$("btnStyle").onclick = () => {
+  const curr = localStorage.getItem("cs_style") || "default";
+  localStorage.setItem("cs_style", STYLES[(STYLES.indexOf(curr) + 1) % STYLES.length]);
+  applyPersonalPrefs();
+};
+$("btnDark").onclick = () => {
+  localStorage.setItem("cs_dark", localStorage.getItem("cs_dark") === "1" ? "0" : "1");
+  applyPersonalPrefs();
+};
+$("btnView").onclick = () => {
+  localStorage.setItem("cs_list", localStorage.getItem("cs_list") === "1" ? "0" : "1");
+  applyPersonalPrefs();
+};
+applyPersonalPrefs();
+
+window.addEventListener("dragover", e => e.preventDefault());
+window.addEventListener("drop", e => e.preventDefault());
+
+function safe(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;",
+    '"': "&quot;", "'": "&#39;"
+  })[c]);
 }
 
 function formatBytes(bytes) {
-  if (!bytes) return "0 o";
-  const units = ["o","Ko","Mo","Go"];
-  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), 3);
-  return `${(bytes / Math.pow(1024, index)).toFixed(1)} ${units[index]}`;
+  if (!bytes) return "";
+  if (bytes < 1024) return bytes + " o";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1).replace(".", ",") + " Ko";
+  return (bytes / (1024 * 1024)).toFixed(2).replace(".", ",") + " Mo";
 }
 
-function formatDate(date) {
-  if (!date) return "";
-  return new Date(date).toLocaleDateString("fr-FR");
+function formatDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }) +
+    " • " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 
-function getFavs() {
-  if (!user) return [];
-  try {
-    return JSON.parse(localStorage.getItem(`cs_favs_${user.id}`) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function toggleFav(id) {
-  if (!user) return say("Connecte-toi pour gérer tes favoris");
-  let favs = getFavs();
-  favs = favs.includes(id) ? favs.filter(x => x !== id) : [...favs, id];
-  localStorage.setItem(`cs_favs_${user.id}`, JSON.stringify(favs));
-  render();
-}
-
-function staff() {
-  return ["admin","moderator","modo"].includes(profile?.role);
-}
-
-function canManageDoc(doc) {
-  return !!user && (staff() || doc.author_id === user.id);
-}
-
-function isImageFile(name) {
-  return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name || "");
-}
+function isImageFile(name) { return /\.(jpg|jpeg|png|gif|webp)$/i.test(name || ""); }
+function isPdfFile(name) { return /\.pdf$/i.test(name || ""); }
 
 function getFileThumbnail(doc) {
-  const name = doc.file_name || "";
-  if (isImageFile(name)) return `<div class="file-thumb thumb-img"><img src="${safe(doc.file_url)}" alt=""></div>`;
-  if (/\.pdf$/i.test(name)) return `<div class="file-thumb thumb-pdf">📕</div>`;
-  if (/\.(doc|docx|odt)$/i.test(name)) return `<div class="file-thumb thumb-doc">📝</div>`;
-  if (/\.(xls|xlsx|csv|ods)$/i.test(name)) return `<div class="file-thumb thumb-xls">📊</div>`;
-  return `<div class="file-thumb thumb-note">📄</div>`;
+  if (doc.file_url && isImageFile(doc.file_name)) {
+    return `<div class="file-thumb thumb-img" data-preview="${doc.id}"><img src="${safe(doc.file_url)}" alt=""></div>`;
+  }
+  if (!doc.file_name) {
+    return `<div class="file-thumb thumb-note"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></div>`;
+  }
+  const n = doc.file_name.toLowerCase();
+  if (/\.pdf$/.test(n)) {
+    return `<div class="file-thumb thumb-pdf"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>`;
+  }
+  if (/\.(xls|xlsx|csv)$/.test(n)) {
+    return `<div class="file-thumb thumb-xls"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>`;
+  }
+  return `<div class="file-thumb thumb-doc"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>`;
+}
+
+function openPreview(title, url, name) {
+  $("previewTitle").textContent = title || name || "Aperçu";
+  if (isImageFile(name)) $("previewBody").innerHTML = `<img src="${safe(url)}">`;
+  else if (isPdfFile(name)) $("previewBody").innerHTML = `<iframe src="${safe(url)}"></iframe>`;
+  $("previewModal").classList.remove("hidden");
+}
+$("closePreview").onclick = () => {
+  $("previewModal").classList.add("hidden");
+  $("previewBody").innerHTML = "";
+};
+$("previewModal").onclick = e => { if (e.target === $("previewModal")) $("closePreview").click(); };
+
+function isAdmin() { return profile?.role === "admin"; }
+function staff() { return ["admin", "moderator"].includes(profile?.role); }
+function canPublish() { return !!user && ["admin", "moderator", "member"].includes(profile?.role); }
+function canManageDoc(doc) { return staff() || (!!user && doc.author_id === user.id); }
+
+function applySiteIdentity() {
+  const cleanTitle = (settings.site_title || "ClassShare").replace(/^[^\w\s]+\s*/, "");
+  $("siteTitle").textContent = cleanTitle;
+  $("siteSubtitle").textContent = settings.site_subtitle || "Espace collaboratif";
+  document.title = cleanTitle;
+}
+
+async function loadSettings() {
+  const { data } = await db.from("settings").select("*").eq("id", 1).maybeSingle();
+  if (data) { settings = data; applySiteIdentity(); }
 }
 
 async function uploadFile(file) {
-  const cleanName = file.name.replace(/[^\w.\-() ]/g, "_");
-  const path = `${user.id}/${Date.now()}-${cleanName}`;
-  const { error } = await db.storage.from(BUCKET).upload(path, file, {
-    cacheControl: "3600",
-    upsert: false
-  });
+  const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${user.id}/${Date.now()}_${cleanName}`;
+  const { error } = await db.storage.from(BUCKET).upload(path, file);
   if (error) throw error;
-
   const { data } = db.storage.from(BUCKET).getPublicUrl(path);
-  return {
-    url: data.publicUrl,
-    name: file.name,
-    size: formatBytes(file.size),
-    bytes: file.size,
-    path
-  };
+  return { url: data.publicUrl, name: file.name, size: formatBytes(file.size), bytes: file.size };
 }
 
-async function refreshUser() {
-  const { data } = await db.auth.getUser();
-  user = data?.user || null;
-  profile = null;
+async function handleDirectDrop(files, folderId) {
+  const targetFolder = folderId === "ALL" ? folders[0]?.id : folderId;
+  if (!canPublish()) {
+    $("authModal").classList.remove("hidden");
+    return say("⚠️ Connecte-toi pour déposer un fichier");
+  }
+  if (!targetFolder) return say("⚠️ Crée d'abord un dossier dans Administration");
+  if (!files || !files.length) return;
 
-  if (user) {
-    const { data: p, error } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
-    if (!error) profile = p;
+  const folderName = folders.find(f => f.id === targetFolder)?.name || "ce dossier";
+  $("uploadStatusText").textContent = `Envoi de ${files.length} fichier(s) vers "${folderName}"...`;
+  $("uploadProgress").classList.remove("hidden");
+
+  for (const file of files) {
+    try {
+      const uploaded = await uploadFile(file);
+      const { error } = await db.from("documents").insert({
+        title: file.name,
+        content: "",
+        folder_id: targetFolder,
+        file_url: uploaded.url,
+        file_name: uploaded.name,
+        file_size: uploaded.size,
+        file_size_bytes: uploaded.bytes,
+        author_id: user.id,
+        author_name: profile?.pseudo || profile?.firstname || profile?.display_name || "Membre",
+        author_class: profile?.class_name || ""
+      });
+      if (error) throw error;
+    } catch (err) {
+      $("uploadProgress").classList.add("hidden");
+      return say("❌ Erreur : " + err.message);
+    }
   }
 
-  $("navMember").classList.toggle("hidden", !user);
-  $("navAdmin").classList.toggle("hidden", !staff());
-  
-  const authSlot = $("authHeaderSlot");
-  if (user) {
-    authSlot.innerHTML = `<div class="user-badge" id="userBadgeTrigger">👤 ${safe(profile?.pseudo || profile?.firstname || user.email)}</div>`;
-    $("userBadgeTrigger").onclick = () => switchView("member");
-  } else {
-    authSlot.innerHTML = `<button class="icon-pill" id="openAuthBtn">🔑 Connexion</button>`;
-    $("openAuthBtn").onclick = () => $("authModal").classList.remove("hidden");
-  }
-
+  $("uploadProgress").classList.add("hidden");
+  selectedFolder = targetFolder;
+  switchView("library");
+  say(`✅ ${files.length} fichier(s) ajouté(s) dans "${folderName}"`);
   await load();
 }
 
+$("quickUploadBtn").onclick = () => $("quickFileInput").click();
+$("quickFileInput").onchange = e => { handleDirectDrop(e.target.files, selectedFolder); e.target.value = ""; };
+
+const dropArea = $("dropArea");
+dropArea.addEventListener("dragover", e => { e.preventDefault(); if (canPublish()) dropArea.classList.add("dragover-area"); });
+dropArea.addEventListener("dragleave", e => { if (!dropArea.contains(e.relatedTarget)) dropArea.classList.remove("dragover-area"); });
+dropArea.addEventListener("drop", e => {
+  e.preventDefault();
+  dropArea.classList.remove("dragover-area");
+  if (e.dataTransfer?.files?.length) handleDirectDrop(e.dataTransfer.files, selectedFolder);
+});
+
 async function load() {
-  const [docResult, folderResult] = await Promise.all([
-    db.from("documents").select("*").order("created_at", { ascending: false }),
-    db.from("folders").select("*").order("name")
-  ]);
+  await loadSettings();
 
-  docs = docResult.data || [];
-  folders = folderResult.data || [];
+  const { data: f, error: fe } = await db.from("folders").select("*").order("name");
+  if (fe) return say("Erreur dossiers : " + fe.message);
+  folders = f || [];
 
-  if (staff()) {
-    const { data: userData } = await db.from("profiles").select("*").order("firstname");
-    users = userData || [];
+  if (!folders.length && staff()) {
+    const { data: newF } = await db.from("folders").insert([
+      { name: "Mathématiques", tag: "Cours" },
+      { name: "NSI & Informatique", tag: "Projet" },
+      { name: "Physique-Chimie", tag: "Exercices" }
+    ]).select();
+    if (newF && newF.length) {
+      await db.from("documents").insert([
+        {
+          title: "Introduction aux Suites Numériques",
+          content: "Rappel sur les suites arithmétiques et géométriques. Formule explicite et récurrente.\n\n• u(n) = u(0) + n*r\n• u(n) = u(0) * q^n",
+          folder_id: newF[0].id,
+          author_name: "Prof. Martin",
+          author_class: "Terminale S"
+        },
+        {
+          title: "Algorithme de Dijkstra en Python",
+          content: "Voici le code source commenté pour trouver le plus court chemin dans un graphe pondéré :\n\ndef dijkstra(graph, start):\n    # Implémentation de la file de priorité\n    pass",
+          folder_id: newF[1].id,
+          author_name: "Alex",
+          author_class: "Terminale NSI"
+        }
+      ]);
+    }
+    const { data: f2 } = await db.from("folders").select("*").order("name");
+    folders = f2 || [];
   }
 
-  const { data: config } = await db.from("settings").select("*").eq("id", 1).maybeSingle();
-  settings = config || {};
-  applySiteIdentity();
+  const { data: d, error: de } = await db.from("documents")
+    .select("id,title,content,author_id,author_name,author_class,folder_id,file_url,file_name,file_size,file_size_bytes,created_at")
+    .order("created_at", { ascending: false });
+  if (de) return say("Erreur documents : " + de.message);
+  docs = d || [];
+
+  if (staff()) {
+    const { data: p } = await db.from("profiles").select("id,firstname,lastname,pseudo,class_name,role").order("pseudo");
+    allProfiles = p || [];
+  } else {
+    allProfiles = [];
+  }
+
+  if (selectedFolder !== "ALL" && !folders.some(f => f.id === selectedFolder))
+    selectedFolder = "ALL";
+
   render();
 }
 
-function applySiteIdentity() {
-  $("siteTitle").textContent = settings.site_title || "ClassShare";
-  $("siteSubtitle").textContent = settings.site_subtitle || "Espace collaboratif";
-  $("cfgTitle").value = settings.site_title || "ClassShare";
-  $("cfgSubtitle").value = settings.site_subtitle || "Espace collaboratif";
+async function refreshUser() {
+  const { data: { session } } = await db.auth.getSession();
+  user = session?.user || null;
+  profile = null;
+
+  if (user) {
+    const { data } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
+    profile = data || {};
+    $("authModal").classList.add("hidden");
+  }
+  renderAccount();
+  await load();
+}
+
+function renderAccount() {
+  $("navMember").classList.toggle("hidden", !user);
+  $("navAdmin").classList.toggle("hidden", !staff());
+  $("onlyMineLabel").classList.toggle("hidden", !user);
+  $("quickUploadBtn").classList.toggle("hidden", !canPublish() || !folders.length);
+
+  if (user) {
+    const displayName = profile?.pseudo || profile?.firstname || "Mon profil";
+    const roleLabel = profile?.role === "admin" ? "Admin" : profile?.role === "moderator" ? "Modérateur" : "Membre";
+    $("authHeaderSlot").innerHTML = `
+      <div class="user-badge" id="openMemberProfile" title="Accéder à mon profil">
+        <span>👤 ${safe(displayName)}</span>
+        <span style="font-size:10px;background:var(--primary);color:white;padding:2px 5px;border-radius:6px">${roleLabel}</span>
+      </div>
+      <button id="logoutBtn" class="icon-pill" title="Se déconnecter">🚪</button>
+    `;
+    $("openMemberProfile").onclick = () => switchView("member");
+    $("logoutBtn").onclick = logout;
+  } else {
+    $("authHeaderSlot").innerHTML = `<button id="openLoginBtn" class="primary-btn" style="padding:6px 12px;font-size:12.5px">Se connecter</button>`;
+    $("openLoginBtn").onclick = () => $("authModal").classList.remove("hidden");
+    $("onlyMine").checked = false;
+  }
 }
 
 function switchView(view) {
   activeView = view;
-  $("libraryView").classList.toggle("hidden", view !== "library" && view !== "favs");
-  $("addView").classList.toggle("hidden", view !== "add");
-  $("memberView").classList.toggle("hidden", view !== "member");
-  $("adminView").classList.toggle("hidden", view !== "admin");
+  closeMobileMenu();
+  ["viewLibrary", "viewAdd", "viewMember", "viewAdmin"].forEach(id => $(id).classList.add("hidden"));
 
-  if (view === "library" || view === "favs") render();
-  if (view === "add") {
-    $("destination").innerHTML = folders.map(f => `<option value="${safe(f.id)}">${safe(f.name)}</option>`).join("");
-  }
-  if (view === "member") {
-    $("myFirstname").value = profile?.firstname || "";
-    $("myLastname").value = profile?.lastname || "";
-    $("myPseudo").value = profile?.pseudo || "";
-    $("myClass").value = profile?.class_name || "";
-  }
-  if (view === "admin") renderAdmin();
-  renderSidebar();
-}
+  if (view === "library" || view === "favs") $("viewLibrary").classList.remove("hidden");
+  else if (view === "add") $("viewAdd").classList.remove("hidden");
+  else if (view === "member") $("viewMember").classList.remove("hidden");
+  else if (view === "admin") $("viewAdmin").classList.remove("hidden");
 
-function renderAdmin() {
-  if (!staff()) return;
-  $("statDocs").textContent = docs.length;
-  $("statUsers").textContent = users.length;
-  $("statFolders").textContent = folders.length;
-
-  $("adminFolders").innerHTML = folders.map(f => `
-    <div class="list-row">
-      <span>📁 ${safe(f.name)} <small>${safe(f.tag || "")}</small></span>
-      <span>
-        <button class="mini-btn del" data-remove-folder="${safe(f.id)}">🗑️</button>
-      </span>
-    </div>
-  `).join("") || "<p>Aucun dossier.</p>";
-
-  $("adminUsers").innerHTML = users.map(u => `
-    <div class="list-row">
-      <span>${safe(u.pseudo || u.firstname || u.id)} <small>${safe(u.class_name || "")}</small></span>
-      <select data-role-user="${safe(u.id)}">
-        <option value="user" ${u.role === "user" ? "selected" : ""}>Membre</option>
-        <option value="moderator" ${u.role === "moderator" ? "selected" : ""}>Modérateur</option>
-        <option value="admin" ${u.role === "admin" ? "selected" : ""}>Administrateur</option>
-      </select>
-    </div>
-  `).join("") || "<p>Aucun membre.</p>";
-}
-
-function renderSidebar() {
-  $("sidebarFolders").innerHTML = folders.map(f => {
-    const count = docs.filter(d => d.folder_id === f.id).length;
-    return `<div class="side-item ${selectedFolder === f.id ? "active" : ""}" data-folder="${safe(f.id)}">
-      <span class="side-left">📁 <span>${safe(f.name)} <small class="folder-tag-badge">${safe(f.tag || "")}</small></span></span>
-      <span class="count-pill">${count}</span>
-    </div>`;
-  }).join("");
-
-  $("countAll").textContent = docs.length;
-  $("countFavs").textContent = getFavs().length;
-
-  document.querySelectorAll("[data-folder]").forEach(el => {
-    el.onclick = () => {
-      selectedFolder = el.dataset.folder;
-      switchView("library");
-      render();
-    };
-  });
+  render();
 }
 
 function render() {
-  let list = [...docs];
+  const favs = getFavs();
+  $("countAll").textContent = docs.length;
+  $("countFavs").textContent = favs.length;
+
+  $("navAll").classList.toggle("active", activeView === "library" && selectedFolder === "ALL");
+  $("navFavs").classList.toggle("active", activeView === "favs");
+  $("navMember").classList.toggle("active", activeView === "member");
+  $("navAdmin").classList.toggle("active", activeView === "admin");
+  $("adminNavLabel").innerHTML = `⚙️ <span>${isAdmin() ? "Administration" : "Modération"}</span>`;
+
+  $("sidebarFolders").innerHTML = folders.map(f => {
+    const count = docs.filter(d => d.folder_id === f.id).length;
+    const isAct = activeView === "library" && selectedFolder === f.id;
+    const tagHtml = f.tag ? `<span class="folder-tag-badge">${safe(f.tag)}</span>` : "";
+    return `
+      <div class="side-item ${isAct ? "active" : ""}" data-folder="${f.id}">
+        <span class="side-left">📁 <span>${safe(f.name)}</span> ${tagHtml}</span>
+        <span class="count-pill">${count}</span>
+      </div>`;
+  }).join("");
+
+  $("destination").innerHTML = folders.map(f => `<option value="${f.id}">${safe(f.name)} ${f.tag ? `(${f.tag})` : ""}</option>`).join("");
+  if (selectedFolder && selectedFolder !== "ALL") $("destination").value = selectedFolder;
 
   if (activeView === "favs") {
-    const favs = getFavs();
-    list = list.filter(d => favs.includes(d.id));
-    $("pageTitle").textContent = "Mes favoris";
-    $("pageSub").textContent = "Retrouve tes ressources sauvegardées.";
-  } else if (selectedFolder !== "ALL") {
-    list = list.filter(d => d.folder_id === selectedFolder);
-    const f = folders.find(x => x.id === selectedFolder);
-    $("pageTitle").textContent = f ? f.name : "Dossier";
-    $("pageSub").textContent = f ? `Ressources du dossier ${f.name}` : "";
-  } else {
+    $("pageTitle").textContent = "⭐ Mes favoris";
+    $("pageSub").textContent = "Tes ressources épinglées pour un accès rapide";
+  } else if (selectedFolder === "ALL") {
     $("pageTitle").textContent = "Tous les fichiers";
-    $("pageSub").textContent = "Explore l'ensemble des ressources partagées.";
+    $("pageSub").textContent = canPublish() ? "Glisse un fichier n'importe où ici pour l'ajouter" : "Parcours l'ensemble des cours partagés";
+  } else {
+    const activeFold = folders.find(f => f.id === selectedFolder);
+    $("pageTitle").textContent = "📁 " + (activeFold?.name || "Dossier") + (activeFold?.tag ? ` [${activeFold.tag}]` : "");
+    $("pageSub").textContent = canPublish() ? "Glisse un fichier ici pour le ranger dans ce dossier" : "Ressources disponibles dans ce dossier";
   }
 
-  const query = ($("search").value || "").toLowerCase();
-  if (query) {
-    list = list.filter(d => 
-      (d.title || "").toLowerCase().includes(query) ||
-      (d.content || "").toLowerCase().includes(query) ||
-      (d.file_name || "").toLowerCase().includes(query)
-    );
-  }
-
-  if ($("onlyMine").checked && user) {
-    list = list.filter(d => d.author_id === user.id);
-  }
-
+  const q = $("search").value.toLowerCase();
+  const onlyMine = $("onlyMine").checked;
   const sort = $("sortOrder").value;
-  if (sort === "newest") list.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
-  if (sort === "oldest") list.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
-  if (sort === "alpha") list.sort((a,b) => (a.title || "").localeCompare(b.title || ""));
-  if (sort === "size") list.sort((a,b) => (b.bytes || 0) - (a.bytes || 0));
 
-  const docContainer = $("documents");
-  docContainer.classList.toggle("list-view", listView);
+  let filtered = docs.filter(d =>
+    (activeView === "favs" ? favs.includes(d.id) : (selectedFolder === "ALL" || d.folder_id === selectedFolder)) &&
+    (!onlyMine || (user && d.author_id === user.id)) &&
+    (d.title + " " + (d.content || "") + " " + (d.file_name || "") + " " + (d.author_name || "") + " " + (d.author_class || "")).toLowerCase().includes(q)
+  );
 
-  docContainer.innerHTML = list.map(d => {
-    const isFav = getFavs().includes(d.id);
-    const folderObj = folders.find(x => x.id === d.folder_id);
-    const hasText = !d.file_url && d.content;
+  if (sort === "oldest") {
+    filtered = [...filtered].reverse();
+  } else if (sort === "alpha") {
+    filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
+  } else if (sort === "size") {
+    filtered = [...filtered].sort((a, b) => (b.file_size_bytes || 0) - (a.file_size_bytes || 0));
+  }
+
+  $("documents").innerHTML = filtered.length ? filtered.map(d => {
+    const hasText = !!(d.content && d.content.trim());
+    const editable = canManageDoc(d);
+    const folderName = folders.find(f => f.id === d.folder_id)?.name || "";
+    const showImg = d.file_url && isImageFile(d.file_name);
+    const canPreview = d.file_url && (showImg || isPdfFile(d.file_name));
+    const isFav = favs.includes(d.id);
+    const thumbHTML = getFileThumbnail(d);
+    const classBadge = d.author_class ? `<span class="doc-class-pill">🎓 ${safe(d.author_class)}</span>` : "";
 
     return `
       <div class="doc ${hasText ? "has-text" : ""}">
         <div>
           <div class="doc-top">
-            <div style="display:flex;align-items:center;gap:10px">
-              ${getFileThumbnail(d)}
-              <div>
+            <div style="display:flex;gap:10px;align-items:flex-start;min-width:0">
+              ${thumbHTML}
+              <div style="min-width:0">
                 <div class="doc-title">${safe(d.title)}</div>
-                <div class="doc-meta">Par ${safe(d.author_name || "Anonyme")} • ${formatDate(d.created_at)}</div>
+                <div class="doc-meta">${safe(d.author_name || "Membre")} ${classBadge} • ${formatDate(d.created_at)}</div>
+                ${(selectedFolder === "ALL" || activeView === "favs") && folderName ? `<span class="doc-folder-badge">📁 ${safe(folderName)}</span>` : ""}
               </div>
             </div>
-            <div style="display:flex;gap:4px">
-              <button class="mini-btn ${isFav ? "fav-on" : ""}" data-fav="${d.id}" title="Favori">⭐</button>
-              ${canManageDoc(d) ? `<button class="mini-btn del" data-del="${d.id}" title="Supprimer">🗑️</button>` : ""}
-            </div>
+            <button class="mini-btn ${isFav ? "fav-on" : ""}" data-fav="${d.id}" title="Favori" style="padding:3px 7px">${isFav ? "⭐" : "☆"}</button>
           </div>
-          ${folderObj ? `<div class="doc-folder-badge">📁 ${safe(folderObj.name)}</div>` : ""}
-          ${d.file_url && isImageFile(d.file_name) ? `<img class="doc-preview-img" src="${safe(d.file_url)}" data-preview="${safe(d.file_url)}" data-title="${safe(d.title)}">` : ""}
-          ${d.content ? `<div class="doc-content">${safe(d.content)}</div>` : ""}
+
+          ${hasText ? `<div class="doc-content">${safe(d.content)}</div>` : ""}
+          ${showImg && !activeView ? `<img class="doc-preview-img" data-preview="${d.id}" src="${safe(d.file_url)}" alt="">` : ""}
         </div>
+
         <div class="doc-footer">
-          ${d.file_url ? `<a class="btn-download" href="${safe(d.file_url)}" target="_blank" download>Télécharger (${safe(d.file_size || "Fichier")})</a>` : `<span></span>`}
+          ${d.file_url ? `<a class="btn-download" href="${safe(d.file_url)}" target="_blank" rel="noopener">⬇️ Télécharger ${d.file_size ? `(${safe(d.file_size)})` : ""}</a>` : `<span style="font-size:11.5px;color:var(--muted)">Note textuelle</span>`}
+          ${canPreview ? `<button class="mini-btn" data-preview="${d.id}" title="Aperçu">👁️</button>` : ""}
+          ${d.file_url ? `<button class="mini-btn" data-copy="${safe(d.file_url)}" title="Copier le lien">🔗</button>` : ""}
+          ${editable ? `<button class="mini-btn" data-edit="${d.id}" title="Modifier">✏️</button>` : ""}
+          ${editable ? `<button class="mini-btn del" data-delete="${d.id}" title="Supprimer">🗑️</button>` : ""}
         </div>
+      </div>`;
+  }).join("") : `<div class="panel-card" style="grid-column:1/-1;text-align:center;padding:36px;color:var(--muted)">Aucune ressource trouvée dans cette vue.</div>`;
+
+  if (user) {
+    const myDocs = docs.filter(d => d.author_id === user.id);
+    $("memberContent").innerHTML = `
+      <div class="stats-row">
+        <div class="stat-box"><strong>${myDocs.length}</strong><span>Mes publications</span></div>
+        <div class="stat-box"><strong>${favs.length}</strong><span>Mes favoris</span></div>
+        <div class="stat-box"><strong>${folders.length}</strong><span>Dossiers partagés</span></div>
+        <div class="stat-box"><strong>${docs.length}</strong><span>Total ressources</span></div>
+      </div>
+
+      <div class="panel-card">
+        <h3>🪪 Mon profil et ma classe</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <label><small>Prénom</small></label>
+            <input id="myFirstname" value="${safe(profile?.firstname || "")}">
+          </div>
+          <div>
+            <label><small>Nom</small></label>
+            <input id="myLastname" value="${safe(profile?.lastname || "")}">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <label><small>Pseudo (affiché)</small></label>
+            <input id="myPseudo" value="${safe(profile?.pseudo || "")}">
+          </div>
+          <div>
+            <label><small>Classe</small></label>
+            <input id="myClass" value="${safe(profile?.class_name || "")}" placeholder="Ex: Terminale S">
+          </div>
+        </div>
+        <button id="saveMyProfile" class="primary-btn">💾 Enregistrer mes modifications</button>
+      </div>
+
+      <div class="panel-card">
+        <h3>📂 Mes ressources publiées (${myDocs.length})</h3>
+        ${myDocs.length ? myDocs.map(d => {
+          const folderName = folders.find(f => f.id === d.folder_id)?.name || "Dossier";
+          return `
+          <div class="list-row">
+            <div>
+              <strong>${safe(d.title)}</strong><br>
+              <small>📁 ${safe(folderName)} • ${formatDate(d.created_at)}</small>
+            </div>
+            <div style="display:flex;gap:5px">
+              <button class="mini-btn" data-edit="${d.id}">✏️</button>
+              <button class="mini-btn del" data-delete="${d.id}">🗑️</button>
+            </div>
+          </div>`;
+        }).join("") : "<p style='color:var(--muted)'>Tu n'as pas encore publié de ressource.</p>"}
       </div>
     `;
-  }).join("") || `<p style="color:var(--muted);grid-column:1/-1;text-align:center;padding:30px">Aucune ressource trouvée.</p>`;
+  }
 
-  document.querySelectorAll("[data-fav]").forEach(btn => {
-    btn.onclick = () => toggleFav(btn.dataset.fav);
-  });
-  document.querySelectorAll("[data-del]").forEach(btn => {
-    btn.onclick = async () => {
-      if (!confirm("Supprimer cette ressource ?")) return;
-      const { error } = await db.from("documents").delete().eq("id", btn.dataset.del);
-      if (error) say("Erreur : " + error.message);
-      else { say("Ressource supprimée"); load(); }
-    };
-  });
-  document.querySelectorAll("[data-preview]").forEach(img => {
-    img.onclick = () => {
-      $("previewTitle").textContent = img.dataset.title;
-      $("previewBody").innerHTML = `<img src="${img.dataset.preview}">`;
-      $("previewModal").classList.remove("hidden");
-    };
-  });
+  if (staff()) {
+    $("management").innerHTML = `
+      <div class="panel-card">
+        <h3>🛡️ Panneau de Modération Rapide (${docs.length} ressources en ligne)</h3>
+        <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">En tant que modérateur/administrateur, tu peux nettoyer ou supprimer instantanément tout contenu inapproprié.</p>
+        <div style="max-height:300px;overflow-y:auto">
+          ${docs.map(d => {
+            const folderName = folders.find(f => f.id === d.folder_id)?.name || "Dossier";
+            return `
+            <div class="list-row">
+              <div>
+                <strong>${safe(d.title)}</strong><br>
+                <small>Par <em>${safe(d.author_name || "Inconnu")}</em> (${safe(d.author_class || "Sans classe")}) dans 📁 <strong>${safe(folderName)}</strong></small>
+              </div>
+              <button class="mini-btn del" data-delete="${d.id}">🗑️ Supprimer</button>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <h3>📁 Gestion des dossiers & Catégories (${folders.length})</h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <input id="newFolder" placeholder="Nom du nouveau dossier (ex: Mathématiques)" style="flex:2;margin:0">
+          <select id="newFolderTag" style="flex:1;margin:0">
+            <option value="Cours">📚 Cours</option>
+            <option value="Exercices">📝 Exercices</option>
+            <option value="Examens">🎯 Examens</option>
+            <option value="Projet">💡 Projet</option>
+          </select>
+          <button id="createFolder" class="primary-btn" style="white-space:nowrap">+ Créer</button>
+        </div>
+        ${folders.map(f => {
+          const count = docs.filter(d => d.folder_id === f.id).length;
+          return `
+          <div class="list-row">
+            <span>📁 <strong>${safe(f.name)}</strong> ${f.tag ? `<span class="folder-tag-badge">${safe(f.tag)}</span>` : ""} <small>(${count})</small></span>
+            <div style="display:flex;gap:5px">
+              <button class="mini-btn" data-rename-folder="${f.id}">✏️ Modifier</button>
+              <button class="mini-btn del" data-remove-folder="${f.id}">🗑️</button>
+            </div>
+          </div>`;
+        }).join("")}
+      </div>
+
+      ${isAdmin() ? `
+      <div class="panel-card">
+        <h3>🎨 Identité de la plateforme</h3>
+        <label><small>Nom du site</small></label>
+        <input id="cfgTitle" value="${safe(settings.site_title)}">
+        <label><small>Slogan</small></label>
+        <input id="cfgSubtitle" value="${safe(settings.site_subtitle)}">
+        <button id="saveSettings" class="primary-btn">💾 Enregistrer</button>
+      </div>
+
+      <div class="panel-card">
+        <h3>👥 Membres & Rôles (${allProfiles.length})</h3>
+        ${allProfiles.map(p => `
+          <div class="list-row">
+            <span>👤 <strong>${safe(p.pseudo || p.firstname || "Sans nom")}</strong> (${safe(p.class_name || "Sans classe")}) ${p.id === user.id ? "<small>(Toi)</small>" : ""}</span>
+            <select data-role-user="${p.id}" ${p.id === user.id ? "disabled" : ""}>
+              <option value="member" ${p.role === "member" ? "selected" : ""}>Membre</option>
+              <option value="moderator" ${p.role === "moderator" ? "selected" : ""}>Modérateur</option>
+              <option value="admin" ${p.role === "admin" ? "selected" : ""}>Administrateur</option>
+            </select>
+          </div>
+        `).join("")}
+      </div>
+      ` : ""}
+
+      <div class="panel-card">
+        <h3>📦 Sauvegarde des données</h3>
+        <button id="exportData" class="sec-btn">⬇️ Exporter la base en JSON</button>
+      </div>
+    `;
+  }
+
+  bindActions();
 }
 
-$("sideNewBtn").onclick = () => { if (!user) { $("authModal").classList.remove("hidden"); } else { switchView("add"); } };
-$("navAll").onclick = () => { selectedFolder = "ALL"; switchView("library"); };
-$("navFavs").onclick = () => { switchView("favs"); };
-$("navMember").onclick = () => { switchView("member"); };
-$("navAdmin").onclick = () => { switchView("admin"); };
+function bindActions() {
+  document.querySelectorAll("[data-folder]").forEach(el => {
+    const folderId = el.dataset.folder;
+    el.onclick = () => {
+      selectedFolder = folderId;
+      switchView("library");
+    };
+    if (folderId !== "ALL") {
+      el.ondragover = e => { e.preventDefault(); e.stopPropagation(); if (canPublish()) el.classList.add("dragover"); };
+      el.ondragleave = () => el.classList.remove("dragover");
+      el.ondrop = e => {
+        e.preventDefault();
+        e.stopPropagation();
+        el.classList.remove("dragover");
+        handleDirectDrop(e.dataTransfer.files, folderId);
+      };
+    }
+  });
 
-$("search").oninput = () => render();
-$("sortOrder").onchange = () => render();
-$("onlyMine").onchange = () => render();
+  document.querySelectorAll("[data-view]").forEach(el => {
+    el.onclick = () => switchView(el.dataset.view);
+  });
 
-$("btnDark").onclick = () => {
-  document.body.classList.toggle("dark");
-  $("btnDark").textContent = document.body.classList.contains("dark") ? "☀️ Clair" : "🌙 Sombre";
-};
+  document.querySelectorAll("[data-back]").forEach(el => {
+    el.onclick = () => switchView("library");
+  });
 
-$("btnView").onclick = () => {
-  listView = !listView;
-  $("btnView").textContent = listView ? "🗂️ Grille" : "☰ Liste";
-  render();
-};
+  document.querySelectorAll("[data-fav]").forEach(el => { el.onclick = () => toggleFav(el.dataset.fav); });
+  document.querySelectorAll("[data-preview]").forEach(el => {
+    el.onclick = () => {
+      const d = docs.find(x => x.id === el.dataset.preview);
+      if (d) openPreview(d.title, d.file_url, d.file_name);
+    };
+  });
+  document.querySelectorAll("[data-copy]").forEach(el => {
+    el.onclick = async () => { await navigator.clipboard.writeText(el.dataset.copy); say("🔗 Lien copié"); };
+  });
+  document.querySelectorAll("[data-delete]").forEach(el => { el.onclick = () => deleteDoc(el.dataset.delete); });
+  document.querySelectorAll("[data-edit]").forEach(el => { el.onclick = () => editDoc(el.dataset.edit); });
+  document.querySelectorAll("[data-remove-folder]").forEach(el => { el.onclick = () => deleteFolder(el.dataset.removeFolder); });
+  document.querySelectorAll("[data-rename-folder]").forEach(el => { el.onclick = () => renameFolder(el.dataset.renameFolder); });
+  document.querySelectorAll("[data-role-user]").forEach(el => { el.onchange = () => changeUserRole(el.dataset.roleUser, el.value); });
 
-$("btnStyle").onclick = () => {
-  if (document.body.classList.contains("style-rounded")) {
-    document.body.classList.remove("style-rounded");
-    document.body.classList.add("style-compact");
-    $("btnStyle").textContent = "📐 Compact";
-  } else if (document.body.classList.contains("style-compact")) {
-    document.body.classList.remove("style-compact");
-    $("btnStyle").textContent = "✨ Standard";
-  } else {
-    document.body.classList.add("style-rounded");
-    $("btnStyle").textContent = "🎨 Arrondi";
+  const saveProfileBtn = $("saveMyProfile");
+  if (saveProfileBtn) saveProfileBtn.onclick = updateProfile;
+
+  const create = $("createFolder");
+  if (create) create.onclick = addFolder;
+
+  const saveCfg = $("saveSettings");
+  if (saveCfg) saveCfg.onclick = saveInterfaceSettings;
+
+  const exp = $("exportData");
+  if (exp) exp.onclick = exportBackup;
+}
+
+$("sideNewBtn").onclick = () => {
+  if (!canPublish()) {
+    $("authModal").classList.remove("hidden");
+    return say("⚠️ Connecte-toi pour publier");
   }
+  switchView("add");
 };
 
-document.querySelectorAll(".dot").forEach(dot => {
-  dot.onclick = () => {
-    document.body.className = document.body.className.replace(/theme-\w+/g, "").trim();
-    if (dot.dataset.theme !== "default") document.body.classList.add(`theme-${dot.dataset.theme}`);
-  };
-});
+$("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
+$("authModal").onclick = e => { if (e.target === $("authModal")) $("authModal").classList.add("hidden"); };
 
-let selectedFile = null;
-$("dropZone").onclick = () => $("fileInput").click();
-$("fileInput").onchange = e => {
-  selectedFile = e.target.files[0];
-  $("selectedFileName").textContent = selectedFile ? selectedFile.name : "";
+async function updateProfile() {
+  const firstname = $("myFirstname").value.trim();
+  const lastname = $("myLastname").value.trim();
+  const pseudo = $("myPseudo").value.trim();
+  const class_name = $("myClass").value.trim();
+
+  const { error } = await db.from("profiles").update({ firstname, lastname, pseudo, class_name }).eq("id", user.id);
+  if (error) return say("❌ " + error.message);
+  say("✅ Profil et classe mis à jour");
+  await refreshUser();
+}
+
+async function saveInterfaceSettings() {
+  if (!isAdmin()) return;
+  const site_title = $("cfgTitle").value.trim() || "ClassShare";
+  const site_subtitle = $("cfgSubtitle").value.trim() || "Espace collaboratif";
+  const { error } = await db.from("settings").upsert({ id: 1, site_title, site_subtitle, theme_color: settings.theme_color });
+  if (error) return say("❌ " + error.message);
+  settings = { ...settings, site_title, site_subtitle };
+  applySiteIdentity();
+  say("✅ Identité mise à jour");
+}
+
+async function changeUserRole(targetId, newRole) {
+  if (!isAdmin()) return;
+  const { error } = await db.from("profiles").update({ role: newRole }).eq("id", targetId);
+  if (error) { say("❌ " + error.message); return await load(); }
+  say("✅ Rôle mis à jour");
+  await load();
+}
+
+function exportBackup() {
+  const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), settings, folders, documents: docs }, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `classshare-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  say("📦 Sauvegarde téléchargée");
+}
+
+const dz = $("dropZone");
+const fi = $("fileInput");
+dz.onclick = () => fi.click();
+fi.onchange = () => {
+  pendingFile = fi.files[0] || null;
+  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name} (${formatBytes(pendingFile.size)})` : "";
+};
+dz.ondragover = e => { e.preventDefault(); e.stopPropagation(); dz.classList.add("dragover"); };
+dz.ondragleave = () => dz.classList.remove("dragover");
+dz.ondrop = e => {
+  e.preventDefault();
+  e.stopPropagation();
+  dz.classList.remove("dragover");
+  pendingFile = e.dataTransfer.files[0] || null;
+  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name} (${formatBytes(pendingFile.size)})` : "";
 };
 
-$("cancelAdd").onclick = () => switchView("library");
+async function addFolder() {
+  if (!staff()) return;
+  const name = $("newFolder").value.trim();
+  const tag = $("newFolderTag").value;
+  if (!name) return say("⚠️ Entre un nom de dossier");
+  const { error } = await db.from("folders").insert({ name, tag });
+  if (error) return say("❌ " + error.message);
+  $("newFolder").value = "";
+  say("✅ Dossier créé avec succès");
+  await load();
+}
 
-$("publish").onclick = async () => {
-  if (!user) return say("Connecte-toi pour publier");
-  const title = $("title").value.trim();
-  const folder_id = $("destination").value;
+async function renameFolder(id) {
+  if (!staff()) return;
+  const current = folders.find(f => f.id === id);
+  if (!current) return;
+  const name = prompt("Nouveau nom du dossier :", current.name);
+  if (name === null) return;
+  const tag = prompt("Catégorie du dossier (ex: Cours, Exercices, Examens, Projet) :", current.tag || "Cours");
+  if (tag === null) return;
+
+  const { error } = await db.from("folders").update({ name: name.trim() || current.name, tag: tag.trim() }).eq("id", id);
+  if (error) return say("❌ " + error.message);
+  say("✅ Dossier mis à jour");
+  await load();
+}
+
+async function deleteFolder(id) {
+  if (!staff() || !confirm("Supprimer ce dossier et tout son contenu ?")) return;
+  const { error } = await db.from("folders").delete().eq("id", id);
+  if (error) return say("❌ " + error.message);
+  say("🗑️ Dossier supprimé");
+  await load();
+}
+
+async function addDoc() {
+  if (!canPublish()) return say("⚠️ Connexion nécessaire");
+  let title = $("title").value.trim();
   const content = $("content").value.trim();
+  const folder_id = $("destination").value;
 
-  if (!title) return say("Le titre est obligatoire");
+  if (!folder_id) return say("⚠️ Choisis un dossier");
+  if (!title && !content && !pendingFile) return say("⚠️ Ajoute un titre, un texte ou un fichier");
 
+  $("publish").disabled = true;
+  $("uploadStatusText").textContent = "Publication en cours...";
   $("uploadProgress").classList.remove("hidden");
+
   try {
-    let fileData = {};
-    if (selectedFile) {
-      fileData = await uploadFile(selectedFile);
+    let file_url = null, file_name = null, file_size = null, file_size_bytes = 0;
+    if (pendingFile) {
+      const uploaded = await uploadFile(pendingFile);
+      file_url = uploaded.url;
+      file_name = uploaded.name;
+      file_size = uploaded.size;
+      file_size_bytes = uploaded.bytes;
+      if (!title) title = pendingFile.name;
     }
 
     const { error } = await db.from("documents").insert({
-      title,
-      folder_id,
+      title: title || "Sans titre",
       content,
-      file_url: fileData.url || null,
-      file_name: fileData.name || null,
-      file_size: fileData.size || null,
-      bytes: fileData.bytes || 0,
+      folder_id,
+      file_url,
+      file_name,
+      file_size,
+      file_size_bytes,
       author_id: user.id,
-      author_name: profile?.pseudo || profile?.firstname || user.email
+      author_name: profile?.pseudo || profile?.firstname || "Membre",
+      author_class: profile?.class_name || ""
     });
-
     if (error) throw error;
 
-    say("Ressource publiée avec succès !");
     $("title").value = "";
     $("content").value = "";
-    selectedFile = null;
+    pendingFile = null;
+    fi.value = "";
     $("selectedFileName").textContent = "";
-    $("fileInput").value = "";
-    switchView("library");
+    selectedFolder = folder_id;
+    say("✅ Ressource publiée");
     await load();
+    switchView("library");
   } catch (err) {
-    say("Erreur : " + err.message);
+    say("❌ " + err.message);
   } finally {
+    $("publish").disabled = false;
     $("uploadProgress").classList.add("hidden");
   }
-};
+}
 
-$("saveMyProfile").onclick = async () => {
-  if (!user) return;
-  const updates = {
-    firstname: $("myFirstname").value,
-    lastname: $("myLastname").value,
-    pseudo: $("myPseudo").value,
-    class_name: $("myClass").value,
-    updated_at: new Date()
-  };
+async function deleteDoc(id) {
+  const doc = docs.find(x => x.id === id);
+  if (!doc || (!staff() && doc.author_id !== user?.id) || !confirm("Supprimer cette ressource ?")) return;
+  const { error } = await db.from("documents").delete().eq("id", id);
+  if (error) return say("❌ " + error.message);
+  say("🗑️ Ressource supprimée");
+  await load();
+}
 
-  const { error } = await db.from("profiles").update(updates).eq("id", user.id);
-  if (error) {
-    say("Erreur lors de la sauvegarde : " + error.message);
-  } else {
-    say("Profil enregistré avec succès !");
-    await refreshUser();
-    switchView("library");
-  }
-};
+async function editDoc(id) {
+  const d = docs.find(x => x.id === id);
+  if (!d || !canManageDoc(d)) return;
+  const title = prompt("Nouveau titre :", d.title);
+  if (title === null) return;
+  const content = prompt("Nouveau contenu :", d.content || "");
+  if (content === null) return;
+  const { error } = await db.from("documents").update({ title: title.trim() || d.title, content }).eq("id", id);
+  if (error) return say("❌ " + error.message);
+  say("✅ Ressource modifiée");
+  await load();
+}
 
-$("logoutBtn").onclick = async () => {
-  await db.auth.signOut();
-  say("Déconnecté");
+async function signup() {
+  const email = $("modalEmail").value.trim();
+  const password = $("modalPassword").value;
+  const firstname = $("modalFirstname").value.trim();
+  const lastname = $("modalLastname").value.trim();
+  const pseudo = $("modalPseudo").value.trim() || firstname || "Membre";
+  const class_name = $("modalClass").value.trim();
+
+  if (!email || password.length < 8) return say("⚠️ E-mail valide et mot de passe de 8 caractères min.");
+  const { data, error } = await db.auth.signUp({
+    email,
+    password,
+    options: { data: { firstname, lastname, pseudo, class_name, display_name: pseudo } }
+  });
+  if (error) return say("❌ " + error.message);
+  if (!data.session) return say("📩 Vérifie ta boîte e-mail pour confirmer ton compte");
   await refreshUser();
-  switchView("library");
-};
+  say("🎉 Bienvenue sur ClassShare !");
+}
 
-/* Connexion & Inscription d'origine avec séparation auth / profiles */
-$("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
-
-$("modalLogin").onclick = async () => {
-  const email = $("modalEmail").value;
+async function login() {
+  const email = $("modalEmail").value.trim();
   const password = $("modalPassword").value;
   const { error } = await db.auth.signInWithPassword({ email, password });
-  if (error) {
-    say("Erreur de connexion : " + error.message);
-  } else {
-    say("Connexion réussie !");
-    $("authModal").classList.add("hidden");
-    await refreshUser();
-  }
-};
+  if (error) return say("❌ " + error.message);
+  await refreshUser();
+  say("✅ Connexion réussie");
+}
 
-$("modalSignup").onclick = async () => {
-  const email = $("modalEmail").value;
-  const password = $("modalPassword").value;
-  
-  // 1. Inscription de base dans Supabase Auth
-  const { data, error } = await db.auth.signUp({ email, password });
+async function logout() {
+  await db.auth.signOut();
+  await refreshUser();
+  switchView("library");
+  say("👋 Déconnexion réussie");
+}
 
-  if (error) {
-    say("Erreur d'inscription : " + error.message);
-    return;
-  }
+$("modalSignup").onclick = signup;
+$("modalLogin").onclick = login;
+$("publish").onclick = addDoc;
+$("search").oninput = render;
+$("sortOrder").onchange = render;
+$("onlyMine").onchange = render;
 
-  // 2. Enregistrement des infos supplémentaires dans "profiles" (rendu possible grâce à la règle INSERT que l'on vient de mettre dans Supabase)
-  if (data?.user) {
-    const { error: profileError } = await db.from("profiles").insert({
-      id: data.user.id,
-      firstname: $("modalFirstname").value || "",
-      lastname: $("modalLastname").value || "",
-      pseudo: $("modalPseudo").value || email.split("@")[0],
-      class_name: $("modalClass").value || "",
-      role: "user"
-    });
+db.auth.onAuthStateChange(() => setTimeout(() => refreshUser(), 0));
 
-    if (profileError) {
-      say("Erreur profil : " + profileError.message);
-    } else {
-      say("Compte créé avec succès !");
-      $("authModal").classList.add("hidden");
-      await refreshUser();
-    }
-  }
-};
-
-$("closePreview").onclick = () => $("previewModal").classList.add("hidden");
-
-refreshUser();
+await refreshUser();
 </script>
 </body>
 </html>
