@@ -447,23 +447,33 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
   </main>
 </div>
 
-<!-- Modale de connexion / inscription -->
+<!-- Modale de connexion / inscription sans e-mail -->
 <div id="authModal" class="modal-backdrop hidden">
   <div class="modal-window">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h2 style="margin:0;font-size:18px">🔐 Compte ClassShare</h2>
+      <h2 style="margin:0;font-size:18px">🔐 Connexion par Pseudo</h2>
       <button id="closeAuthModal" class="mini-btn">✕</button>
     </div>
-    <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted)">Renseigne tes informations pour configurer ton profil.</p>
-    <input id="modalEmail" type="email" placeholder="Adresse e-mail">
-    <input id="modalPassword" type="password" placeholder="Mot de passe (8 caractères min.)">
+    <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted)">Entre ton pseudo pour te connecter ou créer ton profil instantanément.</p>
+    
+    <label><small>Pseudo (Unique)</small></label>
+    <input id="modalPseudo" placeholder="Ex : Drox">
+    
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-      <input id="modalFirstname" placeholder="Prénom" style="margin:5px 0 10px">
-      <input id="modalLastname" placeholder="Nom" style="margin:5px 0 10px">
+      <div>
+        <label><small>Prénom</small></label>
+        <input id="modalFirstname" placeholder="Prénom">
+      </div>
+      <div>
+        <label><small>Nom</small></label>
+        <input id="modalLastname" placeholder="Nom">
+      </div>
     </div>
-    <input id="modalPseudo" placeholder="Pseudo (affiché publiquement)">
-    <input id="modalClass" placeholder="Classe (ex: Terminale S, 2nde 3...)">
-    <div style="display:flex;gap:8px;margin-top:6px">
+    
+    <label><small>Classe</small></label>
+    <input id="modalClass" placeholder="Ex : 3e B">
+
+    <div style="display:flex;gap:8px;margin-top:10px">
       <button id="modalLogin" class="primary-btn" style="flex:1">Se connecter</button>
       <button id="modalSignup" class="sec-btn" style="flex:1">Créer un compte</button>
     </div>
@@ -492,7 +502,6 @@ const BUCKET = "classshare-files";
 
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let user = null;
 let profile = null;
 let folders = [];
 let docs = [];
@@ -504,7 +513,6 @@ let settings = {
 };
 let activeView = "library";
 let selectedFolder = "ALL";
-let pendingFile = null;
 let toastTimer = null;
 
 const $ = id => document.getElementById(id);
@@ -669,8 +677,8 @@ $("previewModal").onclick = e => { if (e.target === $("previewModal")) $("closeP
 
 function isAdmin() { return profile?.role === "admin"; }
 function staff() { return ["admin", "moderator"].includes(profile?.role); }
-function canPublish() { return !!user && ["admin", "moderator", "member"].includes(profile?.role); }
-function canManageDoc(doc) { return staff() || (!!user && doc.author_id === user.id); }
+function canPublish() { return !!profile; }
+function canManageDoc(doc) { return staff() || (!!profile && doc.author_id === profile.id); }
 
 function applySiteIdentity() {
   const cleanTitle = (settings.site_title || "ClassShare").replace(/^[^\w\s]+\s*/, "");
@@ -686,7 +694,7 @@ async function loadSettings() {
 
 async function uploadFile(file) {
   const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const path = `${user.id}/${Date.now()}_${cleanName}`;
+  const path = `${profile.id}/${Date.now()}_${cleanName}`;
   const { error } = await db.storage.from(BUCKET).upload(path, file);
   if (error) throw error;
   const { data } = db.storage.from(BUCKET).getPublicUrl(path);
@@ -697,7 +705,7 @@ async function handleDirectDrop(files, folderId) {
   const targetFolder = folderId === "ALL" ? folders[0]?.id : folderId;
   if (!canPublish()) {
     $("authModal").classList.remove("hidden");
-    return say("⚠️ Connecte-toi pour déposer un fichier");
+    return say("⚠️ Connecte-toi d'abord avec ton pseudo");
   }
   if (!targetFolder) return say("⚠️ Crée d'abord un dossier dans Administration");
   if (!files || !files.length) return;
@@ -717,8 +725,8 @@ async function handleDirectDrop(files, folderId) {
         file_name: uploaded.name,
         file_size: uploaded.size,
         bytes: uploaded.bytes,
-        author_id: user.id,
-        author_name: profile?.pseudo || profile?.firstname || user.email
+        author_id: profile.id,
+        author_name: profile.pseudo || profile.firstname
       });
       if (error) throw error;
     } catch (err) {
@@ -732,23 +740,23 @@ async function handleDirectDrop(files, folderId) {
 }
 
 async function refreshUser() {
-  const { data } = await db.auth.getUser();
-  user = data?.user || null;
+  const savedId = localStorage.getItem("cs_user_id");
   profile = null;
 
-  if (user) {
-    const { data: p } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
-    profile = p;
+  if (savedId) {
+    const { data: p } = await db.from("profiles").select("*").eq("id", savedId).maybeSingle();
+    profile = p || null;
+    if (!profile) localStorage.removeItem("cs_user_id");
   }
 
-  $("navMember").classList.toggle("hidden", !user);
+  $("navMember").classList.toggle("hidden", !profile);
   $("navAdmin").classList.toggle("hidden", !staff());
-  $("onlyMineLabel").classList.toggle("hidden", !user);
-  $("quickUploadBtn").classList.toggle("hidden", !user);
+  $("onlyMineLabel").classList.toggle("hidden", !profile);
+  $("quickUploadBtn").classList.toggle("hidden", !profile);
 
   const slot = $("authHeaderSlot");
-  if (user) {
-    slot.innerHTML = `<div class="user-badge" id="userBadge">👤 ${safe(profile?.pseudo || profile?.firstname || user.email)}</div>`;
+  if (profile) {
+    slot.innerHTML = `<div class="user-badge" id="userBadge">👤 ${safe(profile.pseudo || profile.firstname)}</div>`;
     $("userBadge").onclick = () => switchView("member");
   } else {
     slot.innerHTML = `<button id="openAuthModal" class="icon-pill">🔑 Connexion</button>`;
@@ -791,9 +799,9 @@ document.querySelectorAll("[data-back]").forEach(b => {
 });
 
 $("sideNewBtn").onclick = () => {
-  if (!user) {
+  if (!profile) {
     $("authModal").classList.remove("hidden");
-    say("⚠️ Connecte-toi pour publier");
+    say("⚠️ Connecte-toi avec ton pseudo pour publier");
   } else {
     switchView("add");
     if (selectedFolder !== "ALL" && $("destination")) {
@@ -867,8 +875,8 @@ function render() {
     );
   }
 
-  if ($("onlyMine").checked && user) {
-    list = list.filter(d => d.author_id === user.id);
+  if ($("onlyMine").checked && profile) {
+    list = list.filter(d => d.author_id === profile.id);
   }
 
   const sort = $("sortOrder").value;
@@ -960,7 +968,7 @@ $("fileInput").onchange = e => {
 };
 
 $("publish").onclick = async () => {
-  if (!user) return say("⚠️ Connecte-toi pour publier");
+  if (!profile) return say("⚠️ Connecte-toi avec ton pseudo pour publier");
   const title = $("title").value.trim();
   const folder_id = $("destination").value;
   const content = $("content").value.trim();
@@ -985,8 +993,8 @@ $("publish").onclick = async () => {
       file_name: fileData.name || null,
       file_size: fileData.size || null,
       bytes: fileData.bytes || 0,
-      author_id: user.id,
-      author_name: profile?.pseudo || profile?.firstname || user.email
+      author_id: profile.id,
+      author_name: profile.pseudo || profile.firstname
     });
 
     if (error) throw error;
@@ -1010,12 +1018,12 @@ function renderMemberView() {
   $("memberContent").innerHTML = `
     <div class="panel-card" style="max-width:600px">
       <h3>Informations de ton compte</h3>
+      <label><small>Pseudo</small></label>
+      <input id="myPseudo" value="${safe(profile?.pseudo || "")}">
       <label><small>Prénom</small></label>
       <input id="myFirstname" value="${safe(profile?.firstname || "")}">
       <label><small>Nom</small></label>
       <input id="myLastname" value="${safe(profile?.lastname || "")}">
-      <label><small>Pseudo (public)</small></label>
-      <input id="myPseudo" value="${safe(profile?.pseudo || "")}">
       <label><small>Classe</small></label>
       <input id="myClass" value="${safe(profile?.class_name || "")}">
       <div style="display:flex;gap:10px;margin-top:14px">
@@ -1027,12 +1035,12 @@ function renderMemberView() {
 
   $("saveProfileBtn").onclick = async () => {
     const updates = {
+      pseudo: $("myPseudo").value.trim(),
       firstname: $("myFirstname").value.trim(),
       lastname: $("myLastname").value.trim(),
-      pseudo: $("myPseudo").value.trim(),
       class_name: $("myClass").value.trim()
     };
-    const { error } = await db.from("profiles").update(updates).eq("id", user.id);
+    const { error } = await db.from("profiles").update(updates).eq("id", profile.id);
     if (error) say("Erreur : " + error.message);
     else {
       say("✅ Profil mis à jour avec succès !");
@@ -1042,7 +1050,7 @@ function renderMemberView() {
   };
 
   $("logoutBtn").onclick = async () => {
-    await db.auth.signOut();
+    localStorage.removeItem("cs_user_id");
     say("Déconnecté");
     await refreshUser();
     switchView("library");
@@ -1166,51 +1174,49 @@ function renderAdminView() {
 
 $("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
 
+/* Connexion par Pseudo */
 $("modalLogin").onclick = async () => {
-  const email = $("modalEmail").value.trim();
-  const password = $("modalPassword").value;
-  if (!email || !password) return say("⚠️ Renseigne ton e-mail et ton mot de passe");
+  const pseudo = $("modalPseudo").value.trim();
+  if (!pseudo) return say("⚠️ Entre ton pseudo pour te connecter");
 
-  const { error } = await db.auth.signInWithPassword({ email, password });
-  if (error) {
-    say("Erreur de connexion : " + error.message);
+  const { data, error } = await db.from("profiles").select("*").ilike("pseudo", pseudo).maybeSingle();
+  if (error || !data) {
+    say("❌ Pseudo introuvable. Clique sur 'Créer un compte' !");
   } else {
-    say("✅ Connexion réussie !");
+    localStorage.setItem("cs_user_id", data.id);
+    say("✅ Bon retour, " + data.pseudo + " !");
     $("authModal").classList.add("hidden");
     await refreshUser();
     await loadData();
   }
 };
 
+/* Inscription par Pseudo (Sans e-mail) */
 $("modalSignup").onclick = async () => {
-  const email = $("modalEmail").value.trim();
-  const password = $("modalPassword").value;
-  if (!email || !password) return say("⚠️ Renseigne ton e-mail et ton mot de passe");
+  const pseudo = $("modalPseudo").value.trim();
+  if (!pseudo) return say("⚠️ Choisis un pseudo pour créer ton compte");
 
-  const { data, error } = await db.auth.signUp({ email, password });
+  const { data: existing } = await db.from("profiles").select("id").ilike("pseudo", pseudo).maybeSingle();
+  if (existing) return say("⚠️ Ce pseudo est déjà pris !");
+
+  const newId = crypto.randomUUID();
+  const { error } = await db.from("profiles").insert({
+    id: newId,
+    pseudo: pseudo,
+    firstname: $("modalFirstname").value.trim() || pseudo,
+    lastname: $("modalLastname").value.trim() || "",
+    class_name: $("modalClass").value.trim() || "",
+    role: "member"
+  });
+
   if (error) {
-    say("Erreur d'inscription : " + error.message);
-    return;
-  }
-
-  if (data?.user) {
-    const { error: pErr } = await db.from("profiles").insert({
-      id: data.user.id,
-      firstname: $("modalFirstname").value.trim(),
-      lastname: $("modalLastname").value.trim(),
-      pseudo: $("modalPseudo").value.trim() || email.split("@")[0],
-      class_name: $("modalClass").value.trim(),
-      role: "member"
-    });
-
-    if (pErr) {
-      say("Erreur profil : " + pErr.message);
-    } else {
-      say("✅ Compte créé avec succès !");
-      $("authModal").classList.add("hidden");
-      await refreshUser();
-      await loadData();
-    }
+    say("Erreur : " + error.message);
+  } else {
+    localStorage.setItem("cs_user_id", newId);
+    say("✅ Compte créé avec succès !");
+    $("authModal").classList.add("hidden");
+    await refreshUser();
+    await loadData();
   }
 };
 
