@@ -265,21 +265,21 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
 .list-row:last-child{border-bottom:none}
 .list-row select{width:auto;margin:0;padding:5px 9px}
 
-/* STYLES DISCORD CHAT */
-.discord-layout{display:flex;height:calc(100vh - 70px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
-.discord-sidebar{width:220px;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:12px;flex-shrink:0}
-.discord-chat-main{flex:1;display:flex;flex-direction:column;background:var(--card);min-width:0}
-.discord-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
-.discord-msg{display:flex;gap:10px;align-items:flex-start}
-.discord-avatar{width:36px;height:36px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
-.discord-msg-content{flex:1}
-.discord-msg-header{display:flex;align-items:baseline;gap:8px}
-.discord-username{font-weight:700;font-size:13.5px}
-.discord-time{font-size:11px;color:var(--muted)}
-.discord-text{font-size:13.5px;color:var(--text);margin-top:2px;word-break:break-word;white-space:pre-wrap}
-.discord-input-area{padding:16px;border-top:1px solid var(--border);display:flex;gap:10px;background:var(--card)}
-.discord-input-area input{margin:0;flex:1;border-radius:99px;padding:10px 16px}
-.discord-users-sidebar{width:200px;border-left:1px solid var(--border);background:var(--bg);padding:12px;overflow-y:auto;flex-shrink:0}
+/* STYLES CHAT EN DIRECT */
+.chat-layout{display:flex;height:calc(100vh - 70px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.chat-sidebar{width:220px;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:12px;flex-shrink:0}
+.chat-main{flex:1;display:flex;flex-direction:column;background:var(--card);min-width:0}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.chat-msg{display:flex;gap:10px;align-items:flex-start}
+.chat-avatar{width:36px;height:36px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+.chat-msg-content{flex:1}
+.chat-msg-header{display:flex;align-items:baseline;gap:8px}
+.chat-username{font-weight:700;font-size:13.5px}
+.chat-time{font-size:11px;color:var(--muted)}
+.chat-text{font-size:13.5px;color:var(--text);margin-top:2px;word-break:break-word;white-space:pre-wrap}
+.chat-input-area{padding:16px;border-top:1px solid var(--border);display:flex;gap:10px;background:var(--card)}
+.chat-input-area input{margin:0;flex:1;border-radius:99px;padding:10px 16px}
+.chat-users-sidebar{width:200px;border-left:1px solid var(--border);background:var(--bg);padding:12px;overflow-y:auto;flex-shrink:0}
 
 .modal-backdrop{position:fixed;inset:0;background:rgba(9,13,22,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:999;padding:16px}
 .modal-window{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:14px;max-width:440px;width:100%;padding:22px;box-shadow:var(--shadow-hover)}
@@ -296,8 +296,8 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
 .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:110}
 
 @media (max-width: 900px) {
-  .discord-users-sidebar {display:none}
-  .discord-sidebar {width:160px}
+  .chat-users-sidebar {display:none}
+  .chat-sidebar {width:160px}
 }
 @media (min-width: 821px) {
   .collapse-btn{display:inline-flex}
@@ -338,8 +338,8 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
     <span class="side-left">⭐ <span>Mes favoris</span></span>
     <span id="countFavs" class="count-pill">0</span>
   </div>
-  <div id="navDiscord" class="side-item" data-view="discord">
-    <span class="side-left">💬 <span>Salon Discord en direct</span></span>
+  <div id="navChat" class="side-item" data-view="chat">
+    <span class="side-left">💬 <span>Chat en direct</span></span>
   </div>
   <div id="navMember" class="side-item hidden" data-view="member">
     <span class="side-left">👤 <span>Mon profil & classe</span></span>
@@ -456,35 +456,35 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       <div id="memberContent"></div>
     </div>
 
-    <!-- VUE 4 : DISCORD CHAT EN DIRECT -->
-    <div id="viewDiscord" class="hidden" style="flex:1;display:flex;flex-direction:column">
+    <!-- VUE 4 : CHAT EN DIRECT -->
+    <div id="viewChat" class="hidden" style="flex:1;display:flex;flex-direction:column">
       <div class="page-header" style="margin-bottom:12px">
         <div>
-          <h2 class="page-title">💬 Salon Discord en direct</h2>
+          <h2 class="page-title">💬 Salon de discussion en direct</h2>
           <p class="page-sub">Discute instantanément avec tous les membres connectés</p>
         </div>
         <button class="sec-btn" data-back>← Retour</button>
       </div>
 
-      <div class="discord-layout">
-        <div class="discord-sidebar">
-          <div class="nav-label">Salons textuels</div>
+      <div class="chat-layout">
+        <div class="chat-sidebar">
+          <div class="nav-label">Salons</div>
           <div class="side-item active" style="margin-bottom:4px"># 📁 Général</div>
-          <div class="side-item" style="margin-bottom:4px"># 📚 Entraide-cours</div>
+          <div class="side-item" style="margin-bottom:4px"># 📚 Entraide</div>
           <div class="side-item"># 🎮 Détente</div>
         </div>
 
-        <div class="discord-chat-main">
-          <div id="discordMessages" class="discord-messages"></div>
-          <div class="discord-input-area">
-            <input id="discordInput" placeholder="Envoyer un message dans #général..." autocomplete="off">
-            <button id="discordSendBtn" class="primary-btn">Envoyer</button>
+        <div class="chat-main">
+          <div id="chatMessages" class="chat-messages"></div>
+          <div class="chat-input-area">
+            <input id="chatInput" placeholder="Écris ton message..." autocomplete="off">
+            <button id="chatSendBtn" class="primary-btn">Envoyer</button>
           </div>
         </div>
 
-        <div class="discord-users-sidebar">
+        <div class="chat-users-sidebar">
           <div class="nav-label">Membres inscrits</div>
-          <div id="discordUserList" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
+          <div id="chatUserList" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
         </div>
       </div>
     </div>
@@ -590,7 +590,7 @@ let profile = null;
 let folders = [];
 let docs = [];
 let allProfiles = [];
-let discordMessages = [];
+let chatMessages = [];
 let settings = {
   site_title: "ClassShare",
   site_subtitle: "Espace collaboratif",
@@ -841,7 +841,7 @@ async function refreshUser() {
   }
 
   $("navMember").classList.toggle("hidden", !profile);
-  $("navDiscord").classList.toggle("hidden", !profile);
+  $("navChat").classList.toggle("hidden", !profile);
   $("navAdmin").classList.toggle("hidden", !staff());
   $("onlyMineLabel").classList.toggle("hidden", !profile);
   $("quickUploadBtn").classList.toggle("hidden", !profile);
@@ -867,12 +867,12 @@ async function loadData() {
   folders = fRes.data || [];
   docs = dRes.data || [];
   allProfiles = pRes.data || [];
-  discordMessages = chRes.data || [];
+  chatMessages = chRes.data || [];
 
   renderSidebarFolders();
   renderDestinationOptions();
   render();
-  if (activeView === "discord") renderDiscordChat();
+  if (activeView === "chat") renderChat();
 }
 
 function switchView(view) {
@@ -882,12 +882,12 @@ function switchView(view) {
   $("viewLibrary").classList.toggle("hidden", view !== "library");
   $("viewAdd").classList.toggle("hidden", view !== "add");
   $("viewMember").classList.toggle("hidden", view !== "member");
-  $("viewDiscord").classList.toggle("hidden", view !== "discord");
+  $("viewChat").classList.toggle("hidden", view !== "chat");
   $("viewAdmin").classList.toggle("hidden", view !== "admin");
 
   if (view === "library") render();
   if (view === "member") renderMemberView();
-  if (view === "discord") renderDiscordChat();
+  if (view === "chat") renderChat();
   if (view === "admin") renderAdminView();
 }
 
@@ -909,7 +909,7 @@ $("sideNewBtn").onclick = () => {
 
 $("navAll").onclick = () => { selectedFolder = "ALL"; switchView("library"); };
 $("navFavs").onclick = () => { selectedFolder = "FAVS"; switchView("library"); };
-$("navDiscord").onclick = () => switchView("discord");
+$("navChat").onclick = () => switchView("chat");
 $("navMember").onclick = () => switchView("member");
 $("navAdmin").onclick = () => switchView("admin");
 
@@ -919,7 +919,7 @@ function renderSidebarFolders() {
 
   $("navAll").classList.toggle("active", selectedFolder === "ALL" && activeView === "library");
   $("navFavs").classList.toggle("active", selectedFolder === "FAVS" && activeView === "library");
-  $("navDiscord").classList.toggle("active", activeView === "discord");
+  $("navChat").classList.toggle("active", activeView === "chat");
 
   let html = "";
   for (const f of folders) {
@@ -1166,30 +1166,29 @@ function renderMemberView() {
   };
 }
 
-/* GESTION DU CHAT DISCORD EN DIRECT */
-function renderDiscordChat() {
+/* GESTION DU CHAT EN DIRECT */
+function renderChat() {
   if (!profile) return switchView("library");
 
   let html = "";
-  for (const m of discordMessages) {
+  for (const m of chatMessages) {
     const initial = (m.author_name || "A")[0].toUpperCase();
     html += `
-      <div class="discord-msg">
-        <div class="discord-avatar">${safe(initial)}</div>
-        <div class="discord-msg-content">
-          <div class="discord-msg-header">
-            <span class="discord-username">${safe(m.author_name)}</span>
-            <span class="discord-time">${formatDate(m.created_at)}</span>
+      <div class="chat-msg">
+        <div class="chat-avatar">${safe(initial)}</div>
+        <div class="chat-msg-content">
+          <div class="chat-msg-header">
+            <span class="chat-username">${safe(m.author_name)}</span>
+            <span class="chat-time">${formatDate(m.created_at)}</span>
           </div>
-          <div class="discord-text">${safe(m.content)}</div>
+          <div class="chat-text">${safe(m.content)}</div>
         </div>
       </div>
     `;
   }
-  $("discordMessages").innerHTML = html || `<p style="color:var(--muted);text-align:center;padding:20px">Aucun message pour l'instant. Soyez le premier à parler !</p>`;
+  $("chatMessages").innerHTML = html || `<p style="color:var(--muted);text-align:center;padding:20px">Aucun message pour l'instant. Soyez le premier à parler !</p>`;
   
-  // Scroll auto vers le bas
-  const container = $("discordMessages");
+  const container = $("chatMessages");
   container.scrollTop = container.scrollHeight;
 
   let uHtml = "";
@@ -1201,11 +1200,11 @@ function renderDiscordChat() {
       </div>
     `;
   }
-  $("discordUserList").innerHTML = uHtml;
+  $("chatUserList").innerHTML = uHtml;
 }
 
-async function sendDiscordMessage() {
-  const text = $("discordInput").value.trim();
+async function sendChatMessage() {
+  const text = $("chatInput").value.trim();
   if (!text) return;
   
   const { error } = await db.from("discord_messages").insert({
@@ -1217,20 +1216,23 @@ async function sendDiscordMessage() {
   if (error) {
     say("Erreur : " + error.message);
   } else {
-    $("discordInput").value = "";
+    $("chatInput").value = "";
   }
 }
 
-$("discordSendBtn").onclick = sendDiscordMessage;
-$("discordInput").onkeydown = e => {
-  if (e.key === "Enter") sendDiscordMessage();
+$("chatSendBtn").onclick = sendChatMessage;
+$("chatInput").onkeydown = e => {
+  if (e.key === "Enter") sendChatMessage();
 };
 
-// Ecoute en temps réel de Supabase pour le Chat Discord
-db.channel('public:discord_messages')
+// Écoute en temps réel de Supabase pour afficher les messages instantanément sans refresh
+db.channel('realtime-chat-messages')
   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'discord_messages' }, payload => {
-    discordMessages.push(payload.new);
-    if (activeView === "discord") renderDiscordChat();
+    // Évite les doublons si le message vient d'être inséré par l'utilisateur courant
+    if (!chatMessages.some(m => m.id === payload.new.id)) {
+      chatMessages.push(payload.new);
+      if (activeView === "chat") renderChat();
+    }
   })
   .subscribe();
 
