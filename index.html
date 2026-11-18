@@ -520,7 +520,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
   </main>
 </div>
 
-<!-- Modale de Sanction (Kick / Ban) -->
+<!-- Modale de Sanction (Kick / Ban avec choix de durée) -->
 <div id="sanctionModal" class="modal-backdrop hidden">
   <div class="modal-window">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -532,10 +532,21 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
     <label><small>Type de sanction</small></label>
     <select id="sanctionType">
       <option value="kick">👢 Kick (Déconnecter / Supprimer le compte)</option>
-      <option value="ban">🔨 Ban (Bannir définitivement avec motif)</option>
+      <option value="ban">🔨 Ban (Bannir avec motif)</option>
     </select>
 
-    <label><small>Motif personnalisé de la sanction (affiché sur le site lors de la connexion)</small></label>
+    <div id="banDurationBox">
+      <label><small>Durée du bannissement</small></label>
+      <select id="banDuration">
+        <option value="1h">1 heure</option>
+        <option value="24h">24 heures</option>
+        <option value="7d">7 jours</option>
+        <option value="30d">30 jours</option>
+        <option value="permanent">Permanent (Indéfini)</option>
+      </select>
+    </div>
+
+    <label><small>Motif personnalisé de la sanction (affiché sur le site)</small></label>
     <input id="sanctionReason" placeholder="Ex : Non-respect des règles du chat ou spam...">
 
     <div style="display:flex;gap:8px;margin-top:14px">
@@ -552,9 +563,14 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
     <h2 style="margin:0 0 8px;font-size:18px;color:#dc2626">Accès refusé - Compte banni</h2>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Votre compte a été suspendu par l'administration.</p>
     
-    <div style="background:var(--bg);border:1px solid var(--border);padding:12px;border-radius:8px;text-align:left;margin-bottom:16px">
+    <div style="background:var(--bg);border:1px solid var(--border);padding:12px;border-radius:8px;text-align:left;margin-bottom:12px">
       <strong style="font-size:11.5px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">Motif du bannissement :</strong>
       <span id="banReasonText" style="font-size:13.5px;font-weight:600;word-break:break-word"></span>
+    </div>
+
+    <div style="background:var(--bg);border:1px solid var(--border);padding:10px;border-radius:8px;text-align:left;margin-bottom:16px">
+      <strong style="font-size:11.5px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px">Expiration de la sanction :</strong>
+      <span id="banExpiresText" style="font-size:13px;font-weight:700;color:var(--primary)"></span>
     </div>
 
     <button id="closeBanModalBtn" class="primary-btn" style="width:100%">Compris</button>
@@ -871,11 +887,20 @@ async function refreshUser() {
   }
 
   if (profile && profile.status === 'banned') {
-    const customReason = profile.ban_reason || "Violation des règles de la communauté.";
-    $("banReasonText").textContent = customReason;
-    $("banModal").classList.remove("hidden");
-    localStorage.removeItem("cs_user_id");
-    profile = null;
+    // Vérifier si le ban temporaire est expiré
+    if (profile.ban_expires_at && new Date() > new Date(profile.ban_expires_at)) {
+      // Débannissement automatique si la durée est expirée
+      await db.from("profiles").update({ status: 'active', ban_reason: null, ban_expires_at: null }).eq("id", profile.id);
+      profile.status = 'active';
+    } else {
+      const customReason = profile.ban_reason || "Violation des règles de la communauté.";
+      const expiresFormatted = profile.ban_expires_at ? formatDate(profile.ban_expires_at) : "Bannissement définitif";
+      $("banReasonText").textContent = customReason;
+      $("banExpiresText").textContent = expiresFormatted;
+      $("banModal").classList.remove("hidden");
+      localStorage.removeItem("cs_user_id");
+      profile = null;
+    }
   }
 
   $("navMember").classList.toggle("hidden", !profile);
@@ -1535,7 +1560,7 @@ function renderAdminView() {
   document.querySelectorAll("[data-unbanuid]").forEach(btn => {
     btn.onclick = async () => {
       const uid = btn.dataset.unbanuid;
-      const { error } = await db.from("profiles").update({ status: 'active', ban_reason: null }).eq("id", uid);
+      const { error } = await db.from("profiles").update({ status: 'active', ban_reason: null, ban_expires_at: null }).eq("id", uid);
       if (error) say("Erreur : " + error.message);
       else {
         say("✅ Membre débanni avec succès !");
@@ -1570,6 +1595,11 @@ function renderAdminView() {
   };
 }
 
+$("sanctionType").onchange = () => {
+  const isBan = $("sanctionType").value === "ban";
+  $("banDurationBox").style.display = isBan ? "block" : "none";
+};
+
 $("closeSanctionModal").onclick = () => $("sanctionModal").classList.add("hidden");
 $("cancelSanctionBtn").onclick = () => $("sanctionModal").classList.add("hidden");
 
@@ -1577,6 +1607,7 @@ $("confirmSanctionBtn").onclick = async () => {
   const uid = $("targetUserId").value;
   const type = $("sanctionType").value;
   const reason = $("sanctionReason").value.trim() || "Aucun motif spécifié par la modération.";
+  const durationOption = $("banDuration").value;
 
   $("sanctionModal").classList.add("hidden");
 
@@ -1585,9 +1616,27 @@ $("confirmSanctionBtn").onclick = async () => {
     if (error) say("Erreur : " + error.message);
     else say("👢 Membre expulsé (Kick) avec succès !");
   } else if (type === "ban") {
-    const { error } = await db.from("profiles").update({ status: 'banned', ban_reason: reason }).eq("id", uid);
+    let expiresAt = null;
+    const now = new Date();
+
+    if (durationOption === "1h") now.setHours(now.getHours() + 1);
+    else if (durationOption === "24h") now.setHours(now.getHours() + 24);
+    else if (durationOption === "7d") now.setDate(now.getDate() + 7);
+    else if (durationOption === "30d") now.setDate(now.getDate() + 30);
+    else if (durationOption === "permanent") expiresAt = null;
+
+    if (durationOption !== "permanent") {
+      expiresAt = now.toISOString();
+    }
+
+    const { error } = await db.from("profiles").update({ 
+      status: 'banned', 
+      ban_reason: reason, 
+      ban_expires_at: expiresAt 
+    }).eq("id", uid);
+
     if (error) say("Erreur : " + error.message);
-    else say("🔨 Membre banni avec motif enregistré !");
+    else say("🔨 Membre banni avec succès !");
   }
 
   await loadData();
@@ -1605,8 +1654,22 @@ $("modalLogin").onclick = async () => {
   if (error || !data) return say("❌ Pseudo introuvable.");
 
   if (data.status === 'banned') {
+    // Vérifier si la durée du ban est passée
+    if (data.ban_expires_at && new Date() > new Date(data.ban_expires_at)) {
+      await db.from("profiles").update({ status: 'active', ban_reason: null, ban_expires_at: null }).eq("id", data.id);
+      // Connexion autorisée car le ban a expiré
+      localStorage.setItem("cs_user_id", data.id);
+      say("✅ Ton bannissement a expiré. Bon retour, " + data.pseudo + " !");
+      $("authModal").classList.add("hidden");
+      await refreshUser();
+      await loadData();
+      return;
+    }
+
     const customReason = data.ban_reason || "Violation des règles de la communauté.";
+    const expiresFormatted = data.ban_expires_at ? formatDate(data.ban_expires_at) : "Bannissement définitif";
     $("banReasonText").textContent = customReason;
+    $("banExpiresText").textContent = expiresFormatted;
     $("banModal").classList.remove("hidden");
     $("authModal").classList.add("hidden");
     return;
