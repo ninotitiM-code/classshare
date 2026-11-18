@@ -217,9 +217,10 @@ body.dark .user-badge{color:#93c5fd}
   justify-content:center;
   flex-shrink:0;
   border:1px solid var(--border);
+  cursor:pointer;
 }
 .thumb-pdf{background:#fee2e2;color:#dc2626}
-.thumb-img{background:var(--bg);padding:0;overflow:hidden;cursor:zoom-in}
+.thumb-img{background:var(--bg);padding:0;overflow:hidden}
 .thumb-img img{width:100%;height:100%;object-fit:cover}
 .thumb-doc{background:#dbeafe;color:#2563eb}
 .thumb-xls{background:#dcfce7;color:#16a34a}
@@ -230,7 +231,7 @@ body.dark .user-badge{color:#93c5fd}
 .doc-folder-badge{display:inline-block;font-size:10.5px;font-weight:700;background:var(--primary-soft);color:var(--primary);padding:2px 7px;border-radius:6px;margin-top:5px}
 body.dark .doc-folder-badge{color:#93c5fd}
 
-.doc-preview-img{width:100%;height:150px;object-fit:cover;border-radius:8px;margin:6px 0;border:1px solid var(--border);cursor:zoom-in}
+.doc-preview-img{width:100%;height:150px;object-fit:cover;border-radius:8px;margin:6px 0;border:1px solid var(--border);cursor:pointer}
 .doc-content{white-space:pre-wrap;font-size:13px;line-height:1.5;background:var(--bg);padding:10px;border-radius:8px;margin:6px 0;border:1px solid var(--border)}
 
 .doc-footer{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
@@ -241,6 +242,7 @@ body.dark .btn-download{color:#93c5fd}
 .mini-btn{background:var(--bg);color:var(--text);border:1px solid var(--border);padding:5px 8px;border-radius:7px;font-size:12px;cursor:pointer;margin:0;font-weight:600}
 .mini-btn:hover{border-color:var(--primary);color:var(--primary)}
 .mini-btn.fav-on{background:#fef3c7;color:#b45309;border-color:#f59e0b}
+.mini-btn.like-on{background:#fee2e2;color:#dc2626;border-color:#dc2626}
 .mini-btn.del:hover{background:#fee2e2;color:#dc2626;border-color:#dc2626}
 
 .panel-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
@@ -263,6 +265,13 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
 .list-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 0;border-bottom:1px solid var(--border)}
 .list-row:last-child{border-bottom:none}
 .list-row select{width:auto;margin:0;padding:5px 9px}
+
+/* DROPDOWN NOTIFICATIONS */
+.notif-wrapper{position:relative}
+.notif-dropdown{position:absolute;right:0;top:40px;width:320px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-hover);display:none;z-index:1000;padding:12px;max-height:380px;overflow-y:auto}
+.notif-dropdown.show{display:block}
+.notif-item{padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text)}
+.notif-item:last-child{border-bottom:none}
 
 /* STYLES CHAT ET MP */
 .chat-layout{display:flex;height:calc(100vh - 70px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
@@ -364,6 +373,18 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
     </div>
 
     <div class="topbar-right">
+      <!-- Cloche de Notifications -->
+      <div class="notif-wrapper">
+        <button id="notifBtn" class="icon-pill" title="Notifications">🔔 <span id="notifBadge" class="hidden" style="background:#dc2626;color:white;padding:1px 5px;border-radius:99px;font-size:10px">0</span></button>
+        <div id="notifDropdown" class="notif-dropdown">
+          <div style="font-weight:700;font-size:13px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
+            <span>Notifications récentes</span>
+            <span id="clearNotifs" style="color:var(--primary);cursor:pointer;font-size:11px">Tout effacer</span>
+          </div>
+          <div id="notifList"></div>
+        </div>
+      </div>
+
       <div class="theme-dots" title="Choisir une couleur">
         <button class="dot" data-theme="default" style="background:#2563eb"></button>
         <button class="dot" data-theme="emerald" style="background:#059669"></button>
@@ -404,6 +425,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
           <option value="oldest">📅 Plus anciens</option>
           <option value="alpha">🔤 Ordre alphabétique</option>
           <option value="size">⚖️ Plus volumineux</option>
+          <option value="likes">❤️ Les plus aimés</option>
         </select>
         <label id="onlyMineLabel" class="chip-check hidden">
           <input type="checkbox" id="onlyMine"> 👤 Mes partages uniquement
@@ -449,7 +471,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       <div class="page-header">
         <div>
           <h2 class="page-title">Mon profil et ma classe</h2>
-          <p class="page-sub">Gère tes informations personnelles et tes publications</p>
+          <p class="page-sub">Gère tes informations personnelles, tes publications et consulte tes statistiques</p>
         </div>
         <button class="sec-btn" data-back>← Retour</button>
       </div>
@@ -520,7 +542,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
   </main>
 </div>
 
-<!-- Modale de Sanction (Kick / Ban avec durée personnalisée) -->
+<!-- Modale de Sanction -->
 <div id="sanctionModal" class="modal-backdrop hidden">
   <div class="modal-window">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -547,7 +569,6 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       </select>
     </div>
 
-    <!-- Champ de durée personnalisée (masqué par défaut) -->
     <div id="customDurationBox" class="hidden" style="display:grid;grid-template-columns:2fr 1fr;gap:8px">
       <div>
         <label><small>Valeur</small></label>
@@ -573,7 +594,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
   </div>
 </div>
 
-<!-- Modale de message de Ban (Intégrée au site) -->
+<!-- Modale de message de Ban -->
 <div id="banModal" class="modal-backdrop hidden">
   <div class="modal-window" style="text-align:center;">
     <div style="font-size:40px;margin-bottom:10px">⛔</div>
@@ -630,7 +651,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
   </div>
 </div>
 
-<!-- Modale d'aperçu -->
+<!-- Modale d'aperçu (Images et PDF) -->
 <div id="previewModal" class="modal-backdrop hidden">
   <div class="modal-window large">
     <div class="modal-head">
@@ -723,6 +744,74 @@ function toggleFav(docId) {
   render();
 }
 
+function getLikes() {
+  try { return JSON.parse(localStorage.getItem("cs_likes") || "[]"); }
+  catch { return []; }
+}
+async function toggleLike(docId) {
+  const likes = getLikes();
+  const idx = likes.indexOf(docId);
+  const doc = docs.find(x => x.id === docId);
+  if (!doc) return;
+
+  let newCount = doc.likes_count || 0;
+  if (idx >= 0) {
+    likes.splice(idx, 1);
+    newCount = Math.max(0, newCount - 1);
+    say("J'aime retiré");
+  } else {
+    likes.push(docId);
+    newCount += 1;
+    say("❤️ Merci pour votre like !");
+  }
+  localStorage.setItem("cs_likes", JSON.stringify(likes));
+
+  await db.from("documents").update({ likes_count: newCount }).eq("id", docId);
+  await loadData();
+}
+
+/* SYSTÈME DE NOTIFICATIONS LOCALES */
+function getLocalNotifs() {
+  try { return JSON.parse(localStorage.getItem("cs_notifs") || "[]"); }
+  catch { return []; }
+}
+function addLocalNotif(text) {
+  const notifs = getLocalNotifs();
+  notifs.unshift({ text, time: new Date().toLocaleTimeString("fr-FR", {hour:'2-digit', minute:'2-digit'}) });
+  if (notifs.length > 10) notifs.pop();
+  localStorage.setItem("cs_notifs", JSON.stringify(notifs));
+  renderNotifs();
+}
+function renderNotifs() {
+  const notifs = getLocalNotifs();
+  $("notifBadge.hidden")?.classList.remove("hidden");
+  const badge = $("notifBadge");
+  if (notifs.length > 0) {
+    badge.textContent = notifs.length;
+    badge.classList.remove("hidden");
+  } else {
+    badge.classList.add("hidden");
+  }
+
+  let html = "";
+  for (const n of notifs) {
+    html += `<div class="notif-item">📌 ${safe(n.text)} <small style="display:block;color:var(--muted);font-size:10px">${n.time}</small></div>`;
+  }
+  $("notifList").innerHTML = html || "<p style='font-size:11px;color:var(--muted);text-align:center;padding:10px'>Aucune notification</p>";
+}
+
+$("notifBtn").onclick = (e) => {
+  e.stopPropagation();
+  $("notifDropdown").classList.toggle("show");
+};
+$("clearNotifs").onclick = () => {
+  localStorage.removeItem("cs_notifs");
+  renderNotifs();
+};
+window.onclick = () => {
+  $("notifDropdown").classList.remove("show");
+};
+
 const STYLES = ["default", "rounded", "compact"];
 const STYLE_LABELS = { default: "✨ Standard", rounded: "🫧 Arrondi", compact: "📐 Compact" };
 
@@ -809,7 +898,7 @@ function getFileThumbnail(doc) {
   }
   const n = doc.file_name.toLowerCase();
   if (/\.pdf$/.test(n)) {
-    return `<div class="file-thumb thumb-pdf"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>`;
+    return `<div class="file-thumb thumb-pdf" data-preview="${doc.id}" title="Voir le PDF"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>`;
   }
   if (/\.(xls|xlsx|csv)$/.test(n)) {
     return `<div class="file-thumb thumb-xls"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>`;
@@ -819,8 +908,13 @@ function getFileThumbnail(doc) {
 
 function openPreview(title, url, name) {
   $("previewTitle").textContent = title || name || "Aperçu";
-  if (isImageFile(name)) $("previewBody").innerHTML = `<img src="${safe(url)}">`;
-  else if (isPdfFile(name)) $("previewBody").innerHTML = `<iframe src="${safe(url)}"></iframe>`;
+  if (isImageFile(name)) {
+    $("previewBody").innerHTML = `<img src="${safe(url)}">`;
+  } else if (isPdfFile(name)) {
+    $("previewBody").innerHTML = `<iframe src="${safe(url)}"></iframe>`;
+  } else {
+    $("previewBody").innerHTML = `<p>Aperçu non disponible pour ce type de fichier.</p>`;
+  }
   $("previewModal").classList.remove("hidden");
 }
 $("closePreview").onclick = () => {
@@ -880,9 +974,11 @@ async function handleDirectDrop(files, folderId) {
         file_size: uploaded.size,
         bytes: uploaded.bytes,
         author_id: profile.id,
-        author_name: profile.pseudo || profile.firstname
+        author_name: profile.pseudo || profile.firstname,
+        likes_count: 0
       });
       if (error) throw error;
+      addLocalNotif(`Nouveau fichier : ${file.name}`);
     } catch (err) {
       say("Erreur : " + err.message);
     }
@@ -956,6 +1052,7 @@ async function loadData() {
   renderSidebarFolders();
   renderDestinationOptions();
   render();
+  renderNotifs();
   if (activeView === "chat") {
     if (activeChatSubView === "public") renderChat();
     else renderPrivateChat();
@@ -1077,10 +1174,12 @@ function render() {
   if (sort === "oldest") list.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
   if (sort === "alpha") list.sort((a,b) => (a.title || "").localeCompare(b.title || ""));
   if (sort === "size") list.sort((a,b) => (b.bytes || 0) - (a.bytes || 0));
+  if (sort === "likes") list.sort((a,b) => (b.likes_count || 0) - (a.likes_count || 0));
 
   let html = "";
   for (const d of list) {
     const isFav = getFavs().includes(d.id);
+    const isLiked = getLikes().includes(d.id);
     const folderObj = folders.find(x => x.id === d.folder_id);
     const hasText = !d.file_url && d.content;
 
@@ -1096,6 +1195,7 @@ function render() {
               </div>
             </div>
             <div style="display:flex;gap:4px">
+              <button class="mini-btn ${isLiked ? "like-on" : ""}" data-action="like" data-id="${d.id}" title="J'aime">❤️ ${d.likes_count || 0}</button>
               <button class="mini-btn ${isFav ? "fav-on" : ""}" data-action="fav" data-id="${d.id}" title="Favori">⭐</button>
               ${canManageDoc(d) ? `<button class="mini-btn del" data-action="del" data-id="${d.id}" title="Supprimer">🗑️</button>` : ""}
             </div>
@@ -1116,6 +1216,9 @@ function render() {
   document.querySelectorAll("[data-action='fav']").forEach(btn => {
     btn.onclick = () => toggleFav(btn.dataset.id);
   });
+  document.querySelectorAll("[data-action='like']").forEach(btn => {
+    btn.onclick = () => toggleLike(btn.dataset.id);
+  });
   document.querySelectorAll("[data-action='del']").forEach(btn => {
     btn.onclick = async () => {
       if (!confirm("Supprimer cette ressource ?")) return;
@@ -1124,10 +1227,10 @@ function render() {
       else { say("Ressource supprimée"); await loadData(); }
     };
   });
-  document.querySelectorAll("[data-preview-click]").forEach(img => {
-    const docId = img.dataset.previewClick;
+  document.querySelectorAll("[data-preview], [data-preview-click]").forEach(el => {
+    const docId = el.dataset.preview || el.dataset.previewClick;
     const doc = docs.find(x => x.id === docId);
-    if (doc) img.onclick = () => openPreview(doc.title, doc.file_url, doc.file_name);
+    if (doc) el.onclick = () => openPreview(doc.title, doc.file_url, doc.file_name);
   });
 }
 
@@ -1188,11 +1291,13 @@ $("publish").onclick = async () => {
       file_size: fileData.size || null,
       bytes: fileData.bytes || 0,
       author_id: profile.id,
-      author_name: profile.pseudo || profile.firstname
+      author_name: profile.pseudo || profile.firstname,
+      likes_count: 0
     });
 
     if (error) throw error;
 
+    addLocalNotif(`Nouvelle ressource : ${title}`);
     say("✅ Ressource publiée avec succès !");
     $("title").value = "";
     $("content").value = "";
@@ -1209,7 +1314,16 @@ $("publish").onclick = async () => {
 };
 
 function renderMemberView() {
+  const myDocs = docs.filter(d => d.author_id === profile.id);
+  const totalLikesReceived = myDocs.reduce((acc, d) => acc + (d.likes_count || 0), 0);
+
   $("memberContent").innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
+      <div class="stat-box"><strong>${myDocs.length}</strong><span>Fichiers partagés</span></div>
+      <div class="stat-box"><strong>${totalLikesReceived}</strong><span>Likes reçus sur tes cours</span></div>
+      <div class="stat-box"><strong>${getFavs().length}</strong><span>Favoris enregistrés</span></div>
+    </div>
+
     <div class="panel-card" style="max-width:600px">
       <h3>Informations de ton compte</h3>
       <label><small>Pseudo</small></label>
