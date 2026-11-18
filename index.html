@@ -639,6 +639,17 @@ async function refreshUser() {
 
   $("navMember").classList.toggle("hidden", !user);
   $("navAdmin").classList.toggle("hidden", !staff());
+  
+  // Mise à jour de l'affichage dans le header (Connexion / Pseudo)
+  const authSlot = $("authHeaderSlot");
+  if (user) {
+    authSlot.innerHTML = `<div class="user-badge" id="userBadgeTrigger">👤 ${safe(profile?.pseudo || profile?.firstname || user.email)}</div>`;
+    $("userBadgeTrigger").onclick = () => switchView("member");
+  } else {
+    authSlot.innerHTML = `<button class="icon-pill" id="openAuthBtn">🔑 Connexion</button>`;
+    $("openAuthBtn").onclick = () => $("authModal").classList.remove("hidden");
+  }
+
   await load();
 }
 
@@ -693,10 +704,6 @@ function switchView(view) {
   renderSidebar();
 }
 
-function closeMobileMenu() {
-  // Le volet reste visible sur ordinateur comme sur mobile.
-}
-
 function renderAdmin() {
   if (!staff()) return;
   $("statDocs").textContent = docs.length;
@@ -723,8 +730,6 @@ function renderAdmin() {
       </select>
     </div>
   `).join("") || "<p>Aucun membre.</p>";
-
-  render();
 }
 
 function renderSidebar() {
@@ -744,534 +749,277 @@ function renderSidebar() {
       selectedFolder = el.dataset.folder;
       switchView("library");
       render();
-      closeMobileMenu();
-    };
-    el.ondragover = e => { e.preventDefault(); el.classList.add("dragover"); };
-    el.ondragleave = () => el.classList.remove("dragover");
-    el.ondrop = e => {
-      e.preventDefault();
-      el.classList.remove("dragover");
-      handleDirectDrop(e.dataTransfer.files, el.dataset.folder);
     };
   });
-
-  $("navAll").classList.toggle("active", selectedFolder === "ALL" && activeView === "library");
-  $("navFavs").classList.toggle("active", activeView === "favs");
-  $("navMember").classList.toggle("active", activeView === "member");
-  $("navAdmin").classList.toggle("active", activeView === "admin");
-}
-
-function renderAuth() {
-  const slot = $("authHeaderSlot");
-  if (!user) {
-    slot.innerHTML = `<button class="icon-pill" id="openAuth">🔐 Connexion</button>`;
-    $("openAuth").onclick = () => $("authModal").classList.remove("hidden");
-  } else {
-    const label = profile?.pseudo || profile?.firstname || user.email.split("@")[0];
-    slot.innerHTML = `<div class="user-badge" id="userMenu">👤 ${safe(label)} ▾</div>`;
-    $("userMenu").onclick = () => {
-      const choice = prompt("Compte ClassShare\n\n1. Mon profil\n2. Administration\n3. Déconnexion\n\nEntre un numéro :");
-      if (choice === "1") switchView("member");
-      if (choice === "2" && staff()) switchView("admin");
-      if (choice === "3") logout();
-    };
-  }
 }
 
 function render() {
-  renderSidebar();
-  renderAuth();
+  let list = [...docs];
 
-  const search = $("search").value.toLowerCase().trim();
-  const onlyMine = $("onlyMine").checked;
-  const favs = getFavs();
-
-  let list = docs.filter(d => {
-    if (activeView === "favs" && !favs.includes(d.id)) return false;
-    if (selectedFolder !== "ALL" && activeView === "library" && d.folder_id !== selectedFolder) return false;
-    if (onlyMine && d.author_id !== user?.id) return false;
-    if (search) {
-      const haystack = [d.title, d.content, d.author_name, d.author_class, d.file_name].join(" ").toLowerCase();
-      if (!haystack.includes(search)) return false;
-    }
-    return true;
-  });
-
-  const order = $("sortOrder").value;
-  if (order === "newest") list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  if (order === "oldest") list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  if (order === "alpha") list.sort((a, b) => (a.title || "").localeCompare(b.title || "", "fr"));
-  if (order === "size") list.sort((a, b) => (b.file_size_bytes || 0) - (a.file_size_bytes || 0));
-
-  $("pageTitle").textContent = activeView === "favs" ? "Mes favoris" :
-    selectedFolder === "ALL" ? "Tous les fichiers" :
-    folders.find(f => f.id === selectedFolder)?.name || "Dossier";
-  $("pageSub").textContent = `${list.length} ressource(s) disponible(s)`;
-
-  $("documents").innerHTML = list.length ? list.map(d => {
-    const fav = favs.includes(d.id);
-    const folder = folders.find(f => f.id === d.folder_id);
-    const imagePreview = d.file_url && isImageFile(d.file_name)
-      ? `<img class="doc-preview-img" data-preview="${safe(d.id)}" src="${safe(d.file_url)}" alt="">`
-      : "";
-    const content = d.content ? `<div class="doc-content">${safe(d.content)}</div>` : "";
-    const fileLink = d.file_url
-      ? `<a class="btn-download" href="${safe(d.file_url)}" target="_blank" rel="noopener">⬇ Télécharger ${safe(d.file_name || "le fichier")}</a>`
-      : "";
-
-    return `<article class="doc ${d.content ? "has-text" : ""}">
-      <div>
-        <div class="doc-top">
-          ${getFileThumbnail(d)}
-          <div style="flex:1;min-width:0">
-            <div class="doc-title">${safe(d.title || "Sans titre")}</div>
-            <div class="doc-meta">${safe(d.author_name || "Membre")} ${d.author_class ? `<span class="doc-class-pill">${safe(d.author_class)}</span>` : ""}</div>
-            <div class="doc-meta">${formatDate(d.created_at)} ${d.file_size ? "• " + safe(d.file_size) : ""}</div>
-            ${folder ? `<div class="doc-folder-badge">📁 ${safe(folder.name)}</div>` : ""}
-          </div>
-        </div>
-        ${imagePreview}
-        ${content}
-      </div>
-      <div class="doc-footer">
-        ${fileLink}
-        <button class="mini-btn ${fav ? "fav-on" : ""}" data-fav="${safe(d.id)}" title="Favori">${fav ? "⭐" : "☆"}</button>
-        <button class="mini-btn" data-copy="${safe(d.id)}" title="Copier le lien">🔗</button>
-        ${canManageDoc(d) ? `<button class="mini-btn" data-edit="${safe(d.id)}" title="Modifier">✏️</button><button class="mini-btn del" data-delete="${safe(d.id)}" title="Supprimer">🗑️</button>` : ""}
-      </div>
-    </article>`;
-  }).join("") : `<div class="panel-card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px">
-    <div style="font-size:30px;margin-bottom:8px">📂</div>
-    <strong>Aucune ressource trouvée</strong>
-    <p style="font-size:12px">Essaie de modifier ta recherche ou sélectionne un autre dossier.</p>
-  </div>`;
-
-  document.querySelectorAll("[data-fav]").forEach(el => {
-    el.onclick = () => toggleFav(el.dataset.fav);
-  });
-  document.querySelectorAll("[data-preview]").forEach(el => {
-    el.onclick = () => {
-      const d = docs.find(x => x.id === el.dataset.preview);
-      if (d) openPreview(d.title, d.file_url, d.file_name);
-    };
-  });
-  document.querySelectorAll("[data-copy]").forEach(el => {
-    el.onclick = async () => {
-      const d = docs.find(x => x.id === el.dataset.copy);
-      if (!d?.file_url) return say("⚠️ Aucun lien disponible");
-      const value = d.file_url;
-      try {
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(value);
-        } else {
-          const temp = document.createElement("textarea");
-          temp.value = value;
-          temp.style.position = "fixed";
-          temp.style.opacity = "0";
-          document.body.appendChild(temp);
-          temp.select();
-          const copied = document.execCommand("copy");
-          temp.remove();
-          if (!copied) throw new Error("Copie non autorisée par le navigateur");
-        }
-        say("🔗 Lien copié");
-      } catch (err) {
-        say("⚠️ Impossible de copier automatiquement. Ouvre le fichier et copie son adresse.");
-      }
-    };
-  });
-  document.querySelectorAll("[data-delete]").forEach(el => { el.onclick = () => deleteDoc(el.dataset.delete); });
-  document.querySelectorAll("[data-edit]").forEach(el => { el.onclick = () => editDoc(el.dataset.edit); });
-  document.querySelectorAll("[data-remove-folder]").forEach(el => { el.onclick = () => deleteFolder(el.dataset.removeFolder); });
-  document.querySelectorAll("[data-rename-folder]").forEach(el => { el.onclick = () => renameFolder(el.dataset.renameFolder); });
-  document.querySelectorAll("[data-role-user]").forEach(el => { el.onchange = () => changeUserRole(el.dataset.roleUser, el.value); });
-
-  const saveProfileBtn = $("saveMyProfile");
-  if (saveProfileBtn) saveProfileBtn.onclick = updateProfile;
-
-  const create = $("createFolder");
-  if (create) create.onclick = addFolder;
-
-  const saveCfg = $("saveSettings");
-  if (saveCfg) saveCfg.onclick = saveInterfaceSettings;
-
-  const exp = $("exportData");
-  if (exp) exp.onclick = exportBackup;
-}
-
-function openPreview(title, url, filename) {
-  $("previewTitle").textContent = title || filename || "Aperçu";
-  const body = $("previewBody");
-  if (isImageFile(filename)) {
-    body.innerHTML = `<img src="${safe(url)}" alt="">`;
-  } else if (/\.pdf$/i.test(filename || "")) {
-    body.innerHTML = `<iframe src="${safe(url)}"></iframe>`;
+  if (activeView === "favs") {
+    const favs = getFavs();
+    list = list.filter(d => favs.includes(d.id));
+    $("pageTitle.textContent" ) // géré en bas
+    $("pageTitle").textContent = "Mes favoris";
+    $("pageSub").textContent = "Retrouve tes ressources sauvegardées.";
+  } else if (selectedFolder !== "ALL") {
+    list = list.filter(d => d.folder_id === selectedFolder);
+    const f = folders.find(x => x.id === selectedFolder);
+    $("pageTitle").textContent = f ? f.name : "Dossier";
+    $("pageSub").textContent = f ? `Ressources du dossier ${f.name}` : "";
   } else {
-    body.innerHTML = `<p>Ce fichier ne peut pas être affiché directement.</p><a class="btn-download" href="${safe(url)}" target="_blank" rel="noopener">Télécharger le fichier</a>`;
+    $("pageTitle").textContent = "Tous les fichiers";
+    $("pageSub").textContent = "Explore l'ensemble des ressources partagées.";
   }
-  $("previewModal").classList.remove("hidden");
-}
 
-$("closePreview").onclick = () => $("previewModal").classList.add("hidden");
-$("previewModal").onclick = e => { if (e.target === $("previewModal")) $("previewModal").classList.add("hidden"); };
-
-$("sideNewBtn").onclick = () => {
-  if (!canPublish()) {
-    $("authModal").classList.remove("hidden");
-    return say("⚠️ Connecte-toi pour publier");
+  const query = ($("search").value || "").toLowerCase();
+  if (query) {
+    list = list.filter(d => 
+      (d.title || "").toLowerCase().includes(query) ||
+      (d.content || "").toLowerCase().includes(query) ||
+      (d.file_name || "").toLowerCase().includes(query)
+    );
   }
-  switchView("add");
-};
 
-$("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
-$("authModal").onclick = e => { if (e.target === $("authModal")) $("authModal").classList.add("hidden"); };
-
-async function updateProfile() {
-  const firstname = $("myFirstname").value.trim();
-  const lastname = $("myLastname").value.trim();
-  const pseudo = $("myPseudo").value.trim();
-  const class_name = $("myClass").value.trim();
-
-  const { error } = await db.from("profiles").update({ firstname, lastname, pseudo, class_name }).eq("id", user.id);
-  if (error) return say("❌ " + error.message);
-  say("✅ Profil et classe mis à jour");
-  await refreshUser();
-}
-
-async function saveInterfaceSettings() {
-  if (!isAdmin()) return;
-  const site_title = $("cfgTitle").value.trim() || "ClassShare";
-  const site_subtitle = $("cfgSubtitle").value.trim() || "Espace collaboratif";
-  const { error } = await db.from("settings").upsert({ id: 1, site_title, site_subtitle, theme_color: settings.theme_color });
-  if (error) return say("❌ " + error.message);
-  settings = { ...settings, site_title, site_subtitle };
-  applySiteIdentity();
-  say("✅ Identité mise à jour");
-}
-
-async function changeUserRole(targetId, newRole) {
-  if (!isAdmin()) return;
-  const { error } = await db.from("profiles").update({ role: newRole }).eq("id", targetId);
-  if (error) { say("❌ " + error.message); return await load(); }
-  say("✅ Rôle mis à jour");
-  await load();
-}
-
-function exportBackup() {
-  const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), settings, folders, documents: docs }, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `classshare-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  say("📦 Sauvegarde téléchargée");
-}
-
-const dz = $("dropZone");
-const fi = $("fileInput");
-dz.onclick = e => { if (e.target !== fi) fi.click(); };
-fi.onclick = e => e.stopPropagation();
-fi.onchange = () => {
-  pendingFile = fi.files[0] || null;
-  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name} (${formatBytes(pendingFile.size)})` : "";
-};
-dz.ondragover = e => { e.preventDefault(); e.stopPropagation(); dz.classList.add("dragover"); };
-dz.ondragleave = () => dz.classList.remove("dragover");
-dz.ondrop = e => {
-  e.preventDefault();
-  e.stopPropagation();
-  dz.classList.remove("dragover");
-  pendingFile = e.dataTransfer.files[0] || null;
-  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name} (${formatBytes(pendingFile.size)})` : "";
-};
-
-async function handleDirectDrop(files, folderId) {
-  if (!canPublish()) return say("Connecte-toi pour ajouter un fichier");
-  if (!files || !files.length) return;
-  const file = files[0];
-  const folder = folders.find(f => f.id === folderId);
-  if (!folder) return say("Dossier introuvable");
-
-  $("uploadStatusText").textContent = "Envoi du fichier...";
-  $("uploadProgress").classList.remove("hidden");
-
-  try {
-    const uploaded = await uploadFile(file);
-    const { error } = await db.from("documents").insert({
-      title: file.name,
-      content: "",
-      folder_id: folderId,
-      file_url: uploaded.url,
-      file_name: uploaded.name,
-      file_size: uploaded.size,
-      file_size_bytes: uploaded.bytes,
-      author_id: user.id,
-      author_name: profile?.pseudo || profile?.firstname || "Membre",
-      author_class: profile?.class_name || ""
-    });
-    if (error) {
-      const path = uploaded.url.split(`/${BUCKET}/`)[1];
-      if (path) await db.storage.from(BUCKET).remove([decodeURIComponent(path)]);
-      throw error;
-    }
-    say(`✅ Fichier ajouté dans "${folder.name}"`);
-    await load();
-  } catch (err) {
-    say("❌ " + err.message);
-  } finally {
-    $("uploadProgress").classList.add("hidden");
+  if ($("onlyMine").checked && user) {
+    list = list.filter(d => d.author_id === user.id);
   }
-}
 
-async function addFolder() {
-  if (!staff()) return;
-  const name = $("newFolder").value.trim();
-  const tag = $("newFolderTag").value;
-  if (!name) return say("⚠️ Entre un nom de dossier");
-  const { error } = await db.from("folders").insert({ name, tag });
-  if (error) return say("❌ " + error.message);
-  $("newFolder").value = "";
-  say("✅ Dossier créé avec succès");
-  await load();
-}
+  const sort = $("sortOrder").value;
+  if (sort === "newest") list.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+  if (sort === "oldest") list.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+  if (sort === "alpha") list.sort((a,b) => (a.title || "").localeCompare(b.title || ""));
+  if (sort === "size") list.sort((a,b) => (b.bytes || 0) - (a.bytes || 0));
 
-async function renameFolder(id) {
-  if (!staff()) return;
-  const current = folders.find(f => f.id === id);
-  if (!current) return;
-  const name = prompt("Nouveau nom du dossier :", current.name);
-  if (name === null) return;
-  const tag = prompt("Catégorie du dossier (ex: Cours, Exercices, Examens, Projet) :", current.tag || "Cours");
-  if (tag === null) return;
+  const docContainer = $("documents");
+  docContainer.classList.toggle("list-view", listView);
 
-  const { error } = await db.from("folders").update({ name: name.trim() || current.name, tag: tag.trim() }).eq("id", id);
-  if (error) return say("❌ " + error.message);
-  say("✅ Dossier mis à jour");
-  await load();
-}
+  docContainer.innerHTML = list.map(d => {
+    const isFav = getFavs().includes(d.id);
+    const folderObj = folders.find(x => x.id === d.folder_id);
+    const hasText = !d.file_url && d.content;
 
-async function deleteFolder(id) {
-  if (!staff()) return;
-  const inFolder = docs.filter(d => d.folder_id === id);
-  if (inFolder.length) {
-    return say(`⚠️ Ce dossier contient ${inFolder.length} ressource(s). Déplace ou supprime-les avant de supprimer le dossier.`);
-  }
-  if (!confirm("Supprimer ce dossier vide ?")) return;
-  const { error } = await db.from("folders").delete().eq("id", id);
-  if (error) return say("❌ " + error.message);
-  say("🗑️ Dossier supprimé");
-  await load();
-}
+    return `
+      <div class="doc ${hasText ? "has-text" : ""}">
+        <div>
+          <div class="doc-top">
+            <div style="display:flex;align-items:center;gap:10px">
+              ${getFileThumbnail(d)}
+              <div>
+                <div class="doc-title">${safe(d.title)}</div>
+                <div class="doc-meta">Par ${safe(d.author_name || "Anonyme")} • ${formatDate(d.created_at)}</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:4px">
+              <button class="mini-btn ${isFav ? "fav-on" : ""}" data-fav="${d.id}" title="Favori">⭐</button>
+              ${canManageDoc(d) ? `<button class="mini-btn del" data-del="${d.id}" title="Supprimer">🗑️</button>` : ""}
+            </div>
+          </div>
+          ${folderObj ? `<div class="doc-folder-badge">📁 ${safe(folderObj.name)}</div>` : ""}
+          ${d.file_url && isImageFile(d.file_name) ? `<img class="doc-preview-img" src="${safe(d.file_url)}" data-preview="${safe(d.file_url)}" data-title="${safe(d.title)}">` : ""}
+          ${d.content ? `<div class="doc-content">${safe(d.content)}</div>` : ""}
+        </div>
+        <div class="doc-footer">
+          ${d.file_url ? `<a class="btn-download" href="${safe(d.file_url)}" target="_blank" download>Télécharger (${safe(d.file_size || "Fichier")})</a>` : `<span></span>`}
+        </div>
+      </div>
+    `;
+  }).join("") || `<p style="color:var(--muted);grid-column:1/-1;text-align:center;padding:30px">Aucune ressource trouvée.</p>`;
 
-async function addDoc() {
-  if (!canPublish()) return say("⚠️ Connexion nécessaire");
-  let title = $("title").value.trim();
-  const content = $("content").value.trim();
-  const folder_id = $("destination").value;
-
-  if (!folder_id) return say("⚠️ Choisis un dossier");
-  if (!title && !content && !pendingFile) return say("⚠️ Ajoute un titre, un texte ou un fichier");
-
-  $("publish").disabled = true;
-  $("uploadStatusText").textContent = "Publication en cours...";
-  $("uploadProgress").classList.remove("hidden");
-
-  let uploaded = null;
-  try {
-    let file_url = null, file_name = null, file_size = null, file_size_bytes = 0;
-    if (pendingFile) {
-      uploaded = await uploadFile(pendingFile);
-      file_url = uploaded.url;
-      file_name = uploaded.name;
-      file_size = uploaded.size;
-      file_size_bytes = uploaded.bytes;
-      if (!title) title = pendingFile.name;
-    }
-
-    const { error } = await db.from("documents").insert({
-      title: title || "Sans titre",
-      content,
-      folder_id,
-      file_url,
-      file_name,
-      file_size,
-      file_size_bytes,
-      author_id: user.id,
-      author_name: profile?.pseudo || profile?.firstname || "Membre",
-      author_class: profile?.class_name || ""
-    });
-    if (error) throw error;
-
-    $("title").value = "";
-    $("content").value = "";
-    pendingFile = null;
-    fi.value = "";
-    $("selectedFileName").textContent = "";
-    selectedFolder = folder_id;
-    say("✅ Ressource publiée");
-    await load();
-    switchView("library");
-  } catch (err) {
-    if (uploaded?.path) await db.storage.from(BUCKET).remove([uploaded.path]);
-    say("❌ " + err.message);
-  } finally {
-    $("publish").disabled = false;
-    $("uploadProgress").classList.add("hidden");
-  }
-}
-
-async function deleteDoc(id) {
-  const doc = docs.find(x => x.id === id);
-  if (!doc || (!staff() && doc.author_id !== user?.id) || !confirm("Supprimer cette ressource ?")) return;
-  const { error } = await db.from("documents").delete().eq("id", id);
-  if (error) return say("❌ " + error.message);
-  say("🗑️ Ressource supprimée");
-  await load();
-}
-
-async function editDoc(id) {
-  const d = docs.find(x => x.id === id);
-  if (!d || !canManageDoc(d)) return;
-  const title = prompt("Nouveau titre :", d.title);
-  if (title === null) return;
-  const content = prompt("Nouveau contenu :", d.content || "");
-  if (content === null) return;
-  const { error } = await db.from("documents").update({ title: title.trim() || d.title, content }).eq("id", id);
-  if (error) return say("❌ " + error.message);
-  say("✅ Ressource modifiée");
-  await load();
-}
-
-async function signup() {
-  const email = $("modalEmail").value.trim();
-  const password = $("modalPassword").value;
-  const firstname = $("modalFirstname").value.trim();
-  const lastname = $("modalLastname").value.trim();
-  const pseudo = $("modalPseudo").value.trim() || firstname || "Membre";
-  const class_name = $("modalClass").value.trim();
-
-  if (!email || password.length < 8) return say("⚠️ E-mail valide et mot de passe de 8 caractères min.");
-  const { data, error } = await db.auth.signUp({
-    email,
-    password,
-    options: { data: { firstname, lastname, pseudo, class_name, display_name: pseudo } }
+  // Écouteurs pour les cartes de documents
+  document.querySelectorAll("[data-fav]").forEach(btn => {
+    btn.onclick = () => toggleFav(btn.dataset.fav);
   });
-  if (error) return say("❌ " + error.message);
-  if (!data.session) return say("📩 Vérifie ta boîte e-mail pour confirmer ton compte");
-  await refreshUser();
-  say("🎉 Bienvenue sur ClassShare !");
+  document.querySelectorAll("[data-del]").forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm("Supprimer cette ressource ?")) return;
+      const { error } = await db.from("documents").delete().eq("id", btn.dataset.del);
+      if (error) say("Erreur : " + error.message);
+      else { say("Ressource supprimée"); load(); }
+    };
+  });
+  document.querySelectorAll("[data-preview]").forEach(img => {
+    img.onclick = () => {
+      $("previewTitle").textContent = img.dataset.title;
+      $("previewBody").innerHTML = `<img src="${img.dataset.preview}">`;
+      $("previewModal").classList.remove("hidden");
+    };
+  });
 }
 
-async function login() {
-  const email = $("modalEmail").value.trim();
-  const password = $("modalPassword").value;
-  const { error } = await db.auth.signInWithPassword({ email, password });
-  if (error) return say("❌ " + error.message);
-  await refreshUser();
-  say("✅ Connexion réussie");
-}
+/* Écouteurs généraux et actions du site */
+$("sideNewBtn").onclick = () => { if (!user) { $("authModal").classList.remove("hidden"); } else { switchView("add"); } };
+$("navAll").onclick = () => { selectedFolder = "ALL"; switchView("library"); };
+$("navFavs").onclick = () => { switchView("favs"); };
+$("navMember").onclick = () => { switchView("member"); };
+$("navAdmin").onclick = () => { switchView("admin"); };
 
-async function logout() {
-  await db.auth.signOut();
-  await refreshUser();
-  switchView("library");
-  say("👋 Déconnexion réussie");
-}
-
-$("modalSignup").onclick = signup;
-$("modalLogin").onclick = login;
-$("publish").onclick = addDoc;
-$("search").oninput = render;
-$("sortOrder").onchange = render;
-$("onlyMine").onchange = render;
-
-$("navAll").onclick = () => {
-  selectedFolder = "ALL";
-  switchView("library");
-};
-$("navFavs").onclick = () => switchView("favs");
-$("navMember").onclick = () => switchView("member");
-$("navAdmin").onclick = () => switchView("admin");
-$("cancelAdd").onclick = () => switchView("library");
-
-document.querySelectorAll("[data-theme]").forEach(button => {
-  button.onclick = () => {
-    document.body.className = document.body.className.replace(/\btheme-\S+/g, "").trim();
-    if (button.dataset.theme !== "default") document.body.classList.add(`theme-${button.dataset.theme}`);
-    localStorage.setItem("cs_theme", button.dataset.theme);
-    document.querySelectorAll("[data-theme]").forEach(b => b.classList.toggle("active", b === button));
-  };
-});
+$("search").oninput = () => render();
+$("sortOrder").onchange = () => render();
+$("onlyMine").onchange = () => render();
 
 $("btnDark").onclick = () => {
   document.body.classList.toggle("dark");
-  localStorage.setItem("cs_dark", document.body.classList.contains("dark") ? "1" : "0");
   $("btnDark").textContent = document.body.classList.contains("dark") ? "☀️ Clair" : "🌙 Sombre";
-};
-
-$("btnStyle").onclick = () => {
-  const compact = document.body.classList.toggle("style-compact");
-  document.body.classList.toggle("style-rounded", !compact);
-  $("btnStyle").textContent = compact ? "▢ Compact" : "✨ Standard";
-  localStorage.setItem("cs_style", compact ? "compact" : "standard");
 };
 
 $("btnView").onclick = () => {
   listView = !listView;
-  $("documents").classList.toggle("list-view", listView);
-  $("btnView").textContent = listView ? "▦ Cartes" : "☰ Liste";
-  localStorage.setItem("cs_list_view", listView ? "1" : "0");
+  $("btnView").textContent = listView ? "🗂️ Grille" : "☰ Liste";
+  render();
 };
 
-/* Volet latéral repliable */
-const sidebar = $("sidebar");
-const collapseBtn = $("collapseBtn");
-
-function setSidebarCollapsed(collapsed) {
-  sidebar.classList.toggle("collapsed", collapsed);
-  collapseBtn.textContent = collapsed ? "▶" : "◀";
-  collapseBtn.title = collapsed ? "Déployer la barre latérale" : "Réduire la barre latérale";
-  collapseBtn.setAttribute("aria-label", collapseBtn.title);
-  localStorage.setItem("cs_collapsed", collapsed ? "1" : "0");
-}
-
-collapseBtn.onclick = () => {
-  setSidebarCollapsed(!sidebar.classList.contains("collapsed"));
+$("btnStyle").onclick = () => {
+  if (document.body.classList.contains("style-rounded")) {
+    document.body.classList.remove("style-rounded");
+    document.body.classList.add("style-compact");
+    $("btnStyle").textContent = "📐 Compact";
+  } else if (document.body.classList.contains("style-compact")) {
+    document.body.classList.remove("style-compact");
+    $("btnStyle").textContent = "✨ Standard";
+  } else {
+    document.body.classList.add("style-rounded");
+    $("btnStyle").textContent = "🎨 Arrondi";
+  }
 };
 
-setSidebarCollapsed(localStorage.getItem("cs_collapsed") === "1");
-
-const savedTheme = localStorage.getItem("cs_theme") || "default";
-if (savedTheme !== "default") document.body.classList.add(`theme-${savedTheme}`);
-document.querySelectorAll("[data-theme]").forEach(b => b.classList.toggle("active", b.dataset.theme === savedTheme));
-
-if (localStorage.getItem("cs_dark") === "1") {
-  document.body.classList.add("dark");
-  $("btnDark").textContent = "☀️ Clair";
-}
-if (localStorage.getItem("cs_style") === "compact") {
-  document.body.classList.add("style-compact");
-  $("btnStyle").textContent = "▢ Compact";
-}
-if (localStorage.getItem("cs_list_view") === "1") {
-  listView = true;
-  $("documents").classList.add("list-view");
-  $("btnView").textContent = "▦ Cartes";
-}
-
-document.addEventListener("keydown", e => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-    e.preventDefault();
-    $("search").focus();
-  }
-  if (e.key === "Escape") {
-    $("authModal").classList.add("hidden");
-    $("previewModal").classList.add("hidden");
-  }
+document.querySelectorAll(".dot").forEach(dot => {
+  dot.onclick = () => {
+    document.body.className = document.body.className.replace(/theme-\w+/g, "").trim();
+    if (dot.dataset.theme !== "default") document.body.classList.add(`theme-${dot.dataset.theme}`);
+  };
 });
 
-db.auth.onAuthStateChange(() => setTimeout(() => refreshUser(), 0));
+/* Gestion de l'ajout d'un document */
+let selectedFile = null;
+$("dropZone").onclick = () => $("fileInput").click();
+$("fileInput").onchange = e => {
+  selectedFile = e.target.files[0];
+  $("selectedFileName").textContent = selectedFile ? selectedFile.name : "";
+};
 
-await refreshUser();
+$("cancelAdd").onclick = () => switchView("library");
+
+$("publish").onclick = async () => {
+  if (!user) return say("Connecte-toi pour publier");
+  const title = $("title").value.trim();
+  const folder_id = $("destination").value;
+  const content = $("content").value.trim();
+
+  if (!title) return say("Le titre est obligatoire");
+
+  $("uploadProgress").classList.remove("hidden");
+  try {
+    let fileData = {};
+    if (selectedFile) {
+      fileData = await uploadFile(selectedFile);
+    }
+
+    const { error } = await db.from("documents").insert({
+      title,
+      folder_id,
+      content,
+      file_url: fileData.url || null,
+      file_name: fileData.name || null,
+      file_size: fileData.size || null,
+      bytes: fileData.bytes || 0,
+      author_id: user.id,
+      author_name: profile?.pseudo || profile?.firstname || user.email
+    });
+
+    if (error) throw error;
+
+    say("Ressource publiée avec succès !");
+    $("title").value = "";
+    $("content").value = "";
+    selectedFile = null;
+    $("selectedFileName").textContent = "";
+    $("fileInput").value = "";
+    switchView("library");
+    await load();
+  } catch (err) {
+    say("Erreur : " + err.message);
+  } finally {
+    $("uploadProgress").classList.add("hidden");
+  }
+};
+
+/* Enregistrement du profil (Page Membre) */
+$("saveMyProfile").onclick = async () => {
+  if (!user) return;
+  const updates = {
+    id: user.id,
+    firstname: $("myFirstname").value,
+    lastname: $("myLastname").value,
+    pseudo: $("myPseudo").value,
+    class_name: $("myClass").value,
+    updated_at: new Date()
+  };
+
+  const { error } = await db.from("profiles").upsert(updates);
+  if (error) {
+    say("Erreur lors de la sauvegarde : " + error.message);
+  } else {
+    say("Profil enregistré avec succès !");
+    await refreshUser();
+    switchView("library");
+  }
+};
+
+/* Modale de Connexion / Inscription CORRIGÉE */
+$("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
+
+$("modalLogin").onclick = async () => {
+  const email = $("modalEmail").value;
+  const password = $("modalPassword").value;
+  const { error } = await db.auth.signInWithPassword({ email, password });
+  if (error) {
+    say("Erreur de connexion : " + error.message);
+  } else {
+    say("Connexion réussie !");
+    $("authModal").classList.add("hidden");
+    await refreshUser();
+  }
+};
+
+// Partie modifiée pour éviter l'erreur de base de données à l'inscription
+$("modalSignup").onclick = async () => {
+  const email = $("modalEmail").value;
+  const password = $("modalPassword").value;
+  
+  // 1. Inscription basique de l'utilisateur dans Supabase Auth
+  const { data, error } = await db.auth.signUp({ email, password });
+
+  if (error) {
+    say("Erreur d'inscription : " + error.message);
+    return;
+  }
+
+  // 2. Si le compte est bien créé, on enregistre les informations du profil séparément
+  if (data?.user) {
+    const { error: profileError } = await db.from("profiles").upsert({
+      id: data.user.id,
+      firstname: $("modalFirstname").value,
+      lastname: $("modalLastname").value,
+      pseudo: $("modalPseudo").value,
+      class_name: $("modalClass").value
+    });
+
+    if (profileError) {
+      say("Erreur profil : " + profileError.message);
+    } else {
+      say("Compte créé avec succès !");
+      $("authModal").classList.add("hidden");
+      await refreshUser();
+    }
+  }
+};
+
+/* Fermeture de la modale d'aperçu */
+$("closePreview").onclick = () => $("previewModal").classList.add("hidden");
+
+/* Lancement de l'application */
+refreshUser();
 </script>
 </body>
 </html>
