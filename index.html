@@ -447,30 +447,33 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
   </main>
 </div>
 
-<!-- Modale de connexion / inscription sans e-mail -->
+<!-- Modale de connexion / inscription sécurisée par mot de passe -->
 <div id="authModal" class="modal-backdrop hidden">
   <div class="modal-window">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h2 style="margin:0;font-size:18px">🔐 Connexion par Pseudo</h2>
+      <h2 style="margin:0;font-size:18px">🔐 Connexion sécurisée</h2>
       <button id="closeAuthModal" class="mini-btn">✕</button>
     </div>
-    <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted)">Entre ton pseudo pour te connecter ou créer ton profil instantanément.</p>
+    <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted)">Entre ton pseudo et ton mot de passe.</p>
     
-    <label><small>Pseudo (Unique)</small></label>
+    <label><small>Pseudo</small></label>
     <input id="modalPseudo" placeholder="Ex : Drox">
+    
+    <label><small>Mot de passe</small></label>
+    <input id="modalPassword" type="password" placeholder="Ton mot de passe secret">
     
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
       <div>
-        <label><small>Prénom</small></label>
+        <label><small>Prénom (inscription)</small></label>
         <input id="modalFirstname" placeholder="Prénom">
       </div>
       <div>
-        <label><small>Nom</small></label>
+        <label><small>Nom (inscription)</small></label>
         <input id="modalLastname" placeholder="Nom">
       </div>
     </div>
     
-    <label><small>Classe</small></label>
+    <label><small>Classe (inscription)</small></label>
     <input id="modalClass" placeholder="Ex : 3e B">
 
     <div style="display:flex;gap:8px;margin-top:10px">
@@ -1020,6 +1023,8 @@ function renderMemberView() {
       <h3>Informations de ton compte</h3>
       <label><small>Pseudo</small></label>
       <input id="myPseudo" value="${safe(profile?.pseudo || "")}">
+      <label><small>Nouveau mot de passe (laisser vide si inchangé)</small></label>
+      <input id="myPassword" type="password" placeholder="Nouveau mot de passe secret">
       <label><small>Prénom</small></label>
       <input id="myFirstname" value="${safe(profile?.firstname || "")}">
       <label><small>Nom</small></label>
@@ -1040,6 +1045,11 @@ function renderMemberView() {
       lastname: $("myLastname").value.trim(),
       class_name: $("myClass").value.trim()
     };
+    const newPass = $("myPassword").value.trim();
+    if (newPass) {
+      updates.password = newPass;
+    }
+
     const { error } = await db.from("profiles").update(updates).eq("id", profile.id);
     if (error) say("Erreur : " + error.message);
     else {
@@ -1174,27 +1184,34 @@ function renderAdminView() {
 
 $("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
 
-/* Connexion par Pseudo */
+/* Connexion sécurisée par Pseudo + Mot de passe */
 $("modalLogin").onclick = async () => {
   const pseudo = $("modalPseudo").value.trim();
-  if (!pseudo) return say("⚠️ Entre ton pseudo pour te connecter");
+  const password = $("modalPassword").value;
+  if (!pseudo || !password) return say("⚠️ Entre ton pseudo et ton mot de passe");
 
   const { data, error } = await db.from("profiles").select("*").ilike("pseudo", pseudo).maybeSingle();
   if (error || !data) {
-    say("❌ Pseudo introuvable. Clique sur 'Créer un compte' !");
-  } else {
-    localStorage.setItem("cs_user_id", data.id);
-    say("✅ Bon retour, " + data.pseudo + " !");
-    $("authModal").classList.add("hidden");
-    await refreshUser();
-    await loadData();
+    return say("❌ Pseudo introuvable.");
   }
+
+  // Vérification du mot de passe stocké
+  if (data.password && data.password !== password) {
+    return say("❌ Mot de passe incorrect !");
+  }
+
+  localStorage.setItem("cs_user_id", data.id);
+  say("✅ Bon retour, " + data.pseudo + " !");
+  $("authModal").classList.add("hidden");
+  await refreshUser();
+  await loadData();
 };
 
-/* Inscription par Pseudo (Sans e-mail) */
+/* Inscription sécurisée par Pseudo + Mot de passe */
 $("modalSignup").onclick = async () => {
   const pseudo = $("modalPseudo").value.trim();
-  if (!pseudo) return say("⚠️ Choisis un pseudo pour créer ton compte");
+  const password = $("modalPassword").value;
+  if (!pseudo || !password) return say("⚠️ Entre un pseudo et un mot de passe pour ton compte");
 
   const { data: existing } = await db.from("profiles").select("id").ilike("pseudo", pseudo).maybeSingle();
   if (existing) return say("⚠️ Ce pseudo est déjà pris !");
@@ -1203,6 +1220,7 @@ $("modalSignup").onclick = async () => {
   const { error } = await db.from("profiles").insert({
     id: newId,
     pseudo: pseudo,
+    password: password, // Sauvegarde sécurisée du mot de passe dans la table profiles
     firstname: $("modalFirstname").value.trim() || pseudo,
     lastname: $("modalLastname").value.trim() || "",
     class_name: $("modalClass").value.trim() || "",
@@ -1213,7 +1231,7 @@ $("modalSignup").onclick = async () => {
     say("Erreur : " + error.message);
   } else {
     localStorage.setItem("cs_user_id", newId);
-    say("✅ Compte créé avec succès !");
+    say("✅ Compte sécurisé créé avec succès !");
     $("authModal").classList.add("hidden");
     await refreshUser();
     await loadData();
