@@ -228,7 +228,6 @@ body.dark .user-badge{color:#93c5fd}
 
 .doc-title{font-weight:700;font-size:14px;line-height:1.35;color:var(--text);word-break:break-word}
 .doc-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
-.doc-class-pill{display:inline-block;font-size:10px;font-weight:700;background:var(--border);color:var(--text);padding:1px 5px;border-radius:4px;margin-left:4px}
 .doc-folder-badge{display:inline-block;font-size:10.5px;font-weight:700;background:var(--primary-soft);color:var(--primary);padding:2px 7px;border-radius:6px;margin-top:5px}
 body.dark .doc-folder-badge{color:#93c5fd}
 
@@ -337,7 +336,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       <button id="collapseBtn" class="collapse-btn" title="Réduire la barre latérale">◀</button>
       <div class="search-wrap">
         <span>🔎</span>
-        <input id="search" placeholder="Rechercher un cours, un auteur, une classe... (Ctrl+K)">
+        <input id="search" placeholder="Rechercher un cours, un auteur... (Ctrl+K)">
       </div>
     </div>
 
@@ -408,7 +407,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
         <label><small>Titre de la ressource</small></label>
         <input id="title" placeholder="Ex : Fiche de révision - Chapitre 3">
 
-        <label><small>Texte ou notes (optionnel - s'affichera directement dans la carte)</small></label>
+        <label><small>Texte ou notes (optionnel)</small></label>
         <textarea id="content" rows="6" placeholder="Écris ton cours, tes notes ou colle un résumé ici..."></textarea>
 
         <label><small>Fichier joint (optionnel)</small></label>
@@ -717,654 +716,511 @@ async function handleDirectDrop(files, folderId) {
         file_url: uploaded.url,
         file_name: uploaded.name,
         file_size: uploaded.size,
-        file_size_bytes: uploaded.bytes,
+        bytes: uploaded.bytes,
         author_id: user.id,
-        author_name: profile?.pseudo || profile?.firstname || profile?.display_name || "Membre",
-        author_class: profile?.class_name || ""
+        author_name: profile?.pseudo || profile?.firstname || user.email
       });
       if (error) throw error;
     } catch (err) {
-      $("uploadProgress").classList.add("hidden");
-      return say("❌ Erreur : " + err.message);
+      say("Erreur : " + err.message);
     }
   }
 
   $("uploadProgress").classList.add("hidden");
-  selectedFolder = targetFolder;
-  switchView("library");
-  say(`✅ ${files.length} fichier(s) ajouté(s) dans "${folderName}"`);
-  await load();
-}
-
-$("quickUploadBtn").onclick = () => $("quickFileInput").click();
-$("quickFileInput").onchange = e => { handleDirectDrop(e.target.files, selectedFolder); e.target.value = ""; };
-
-const dropArea = $("dropArea");
-dropArea.addEventListener("dragover", e => { e.preventDefault(); if (canPublish()) dropArea.classList.add("dragover-area"); });
-dropArea.addEventListener("dragleave", e => { if (!dropArea.contains(e.relatedTarget)) dropArea.classList.remove("dragover-area"); });
-dropArea.addEventListener("drop", e => {
-  e.preventDefault();
-  dropArea.classList.remove("dragover-area");
-  if (e.dataTransfer?.files?.length) handleDirectDrop(e.dataTransfer.files, selectedFolder);
-});
-
-async function load() {
-  await loadSettings();
-
-  const { data: f, error: fe } = await db.from("folders").select("*").order("name");
-  if (fe) return say("Erreur dossiers : " + fe.message);
-  folders = f || [];
-
-  if (!folders.length && staff()) {
-    const { data: newF } = await db.from("folders").insert([
-      { name: "Mathématiques", tag: "Cours" },
-      { name: "NSI & Informatique", tag: "Projet" },
-      { name: "Physique-Chimie", tag: "Exercices" }
-    ]).select();
-    if (newF && newF.length) {
-      await db.from("documents").insert([
-        {
-          title: "Introduction aux Suites Numériques",
-          content: "Rappel sur les suites arithmétiques et géométriques. Formule explicite et récurrente.\n\n• u(n) = u(0) + n*r\n• u(n) = u(0) * q^n",
-          folder_id: newF[0].id,
-          author_name: "Prof. Martin",
-          author_class: "Terminale S"
-        },
-        {
-          title: "Algorithme de Dijkstra en Python",
-          content: "Voici le code source commenté pour trouver le plus court chemin dans un graphe pondéré :\n\ndef dijkstra(graph, start):\n    # Implémentation de la file de priorité\n    pass",
-          folder_id: newF[1].id,
-          author_name: "Alex",
-          author_class: "Terminale NSI"
-        }
-      ]);
-    }
-    const { data: f2 } = await db.from("folders").select("*").order("name");
-    folders = f2 || [];
-  }
-
-  const { data: d, error: de } = await db.from("documents")
-    .select("id,title,content,author_id,author_name,author_class,folder_id,file_url,file_name,file_size,file_size_bytes,created_at")
-    .order("created_at", { ascending: false });
-  if (de) return say("Erreur documents : " + de.message);
-  docs = d || [];
-
-  if (staff()) {
-    const { data: p } = await db.from("profiles").select("id,firstname,lastname,pseudo,class_name,role").order("pseudo");
-    allProfiles = p || [];
-  } else {
-    allProfiles = [];
-  }
-
-  if (selectedFolder !== "ALL" && !folders.some(f => f.id === selectedFolder))
-    selectedFolder = "ALL";
-
-  render();
+  say("✅ Fichier(s) déposé(s) avec succès !");
+  await loadData();
 }
 
 async function refreshUser() {
-  const { data: { session } } = await db.auth.getSession();
-  user = session?.user || null;
+  const { data } = await db.auth.getUser();
+  user = data?.user || null;
   profile = null;
 
   if (user) {
-    const { data } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
-    profile = data || {};
-    $("authModal").classList.add("hidden");
+    const { data: p } = await db.from("profiles").select("*").eq("id", user.id).maybeSingle();
+    profile = p;
   }
-  renderAccount();
-  await load();
-}
 
-function renderAccount() {
   $("navMember").classList.toggle("hidden", !user);
   $("navAdmin").classList.toggle("hidden", !staff());
   $("onlyMineLabel").classList.toggle("hidden", !user);
-  $("quickUploadBtn").classList.toggle("hidden", !canPublish() || !folders.length);
+  $("quickUploadBtn").classList.toggle("hidden", !user);
 
+  const slot = $("authHeaderSlot");
   if (user) {
-    const displayName = profile?.pseudo || profile?.firstname || "Mon profil";
-    const roleLabel = profile?.role === "admin" ? "Admin" : profile?.role === "moderator" ? "Modérateur" : "Membre";
-    $("authHeaderSlot").innerHTML = `
-      <div class="user-badge" id="openMemberProfile" title="Accéder à mon profil">
-        <span>👤 ${safe(displayName)}</span>
-        <span style="font-size:10px;background:var(--primary);color:white;padding:2px 5px;border-radius:6px">${roleLabel}</span>
-      </div>
-      <button id="logoutBtn" class="icon-pill" title="Se déconnecter">🚪</button>
-    `;
-    $("openMemberProfile").onclick = () => switchView("member");
-    $("logoutBtn").onclick = logout;
+    slot.innerHTML = `<div class="user-badge" id="userBadge">👤 ${safe(profile?.pseudo || profile?.firstname || user.email)}</div>`;
+    $("userBadge").onclick = () => switchView("member");
   } else {
-    $("authHeaderSlot").innerHTML = `<button id="openLoginBtn" class="primary-btn" style="padding:6px 12px;font-size:12.5px">Se connecter</button>`;
-    $("openLoginBtn").onclick = () => $("authModal").classList.remove("hidden");
-    $("onlyMine").checked = false;
+    slot.innerHTML = `<button id="openAuthModal" class="icon-pill">🔑 Connexion</button>`;
+    $("openAuthModal").onclick = () => $("authModal").classList.remove("hidden");
   }
+}
+
+async function loadData() {
+  const [fRes, dRes, pRes] = await Promise.all([
+    db.from("folders").select("*").order("name"),
+    db.from("documents").select("*").order("created_at", { ascending: false }),
+    staff() ? db.from("profiles").select("*") : Promise.resolve({ data: [] })
+  ]);
+
+  folders = fRes.data || [];
+  docs = dRes.data || [];
+  allProfiles = pRes.data || [];
+
+  renderSidebarFolders();
+  renderDestinationOptions();
+  render();
 }
 
 function switchView(view) {
   activeView = view;
   closeMobileMenu();
-  ["viewLibrary", "viewAdd", "viewMember", "viewAdmin"].forEach(id => $(id).classList.add("hidden"));
 
-  if (view === "library" || view === "favs") $("viewLibrary").classList.remove("hidden");
-  else if (view === "add") $("viewAdd").classList.remove("hidden");
-  else if (view === "member") $("viewMember").classList.remove("hidden");
-  else if (view === "admin") $("viewAdmin").classList.remove("hidden");
+  $("viewLibrary").classList.toggle("hidden", view !== "library");
+  $("viewAdd").classList.toggle("hidden", view !== "add");
+  $("viewMember").classList.toggle("hidden", view !== "member");
+  $("viewAdmin").classList.toggle("hidden", view !== "admin");
 
-  render();
+  if (view === "library") render();
+  if (view === "member") renderMemberView();
+  if (view === "admin") renderAdminView();
+}
+
+document.querySelectorAll("[data-back]").forEach(b => {
+  b.onclick = () => switchView("library");
+});
+
+$("sideNewBtn").onclick = () => {
+  if (!user) {
+    $("authModal").classList.remove("hidden");
+    say("⚠️ Connecte-toi pour publier");
+  } else {
+    switchView("add");
+    if (selectedFolder !== "ALL" && $("destination")) {
+      $("destination").value = selectedFolder;
+    }
+  }
+};
+
+$("navAll").onclick = () => { selectedFolder = "ALL"; switchView("library"); };
+$("navFavs").onclick = () => { selectedFolder = "FAVS"; switchView("library"); };
+$("navMember").onclick = () => switchView("member");
+$("navAdmin").onclick = () => switchView("admin");
+
+function renderSidebarFolders() {
+  $("countAll").textContent = docs.length;
+  $("countFavs").textContent = getFavs().length;
+
+  let html = "";
+  for (const f of folders) {
+    const count = docs.filter(d => d.folder_id === f.id).length;
+    const active = selectedFolder === f.id ? "active" : "";
+    html += `
+      <div class="side-item ${active}" data-folder-id="${f.id}">
+        <span class="side-left">📁 <span>${safe(f.name)} <small class="folder-tag-badge">${safe(f.tag || "")}</small></span></span>
+        <span class="count-pill">${count}</span>
+      </div>`;
+  }
+  $("sidebarFolders").innerHTML = html;
+
+  document.querySelectorAll("[data-folder-id]").forEach(el => {
+    el.onclick = () => {
+      selectedFolder = el.dataset.folderId;
+      switchView("library");
+    };
+  });
+}
+
+function renderDestinationOptions() {
+  let html = "";
+  for (const f of folders) {
+    html += `<option value="${f.id}">${safe(f.name)} (${safe(f.tag || "Dossier")})</option>`;
+  }
+  $("destination").innerHTML = html;
 }
 
 function render() {
-  const favs = getFavs();
-  $("countAll").textContent = docs.length;
-  $("countFavs").textContent = favs.length;
+  let list = [...docs];
 
-  $("navAll").classList.toggle("active", activeView === "library" && selectedFolder === "ALL");
-  $("navFavs").classList.toggle("active", activeView === "favs");
-  $("navMember").classList.toggle("active", activeView === "member");
-  $("navAdmin").classList.toggle("active", activeView === "admin");
-  $("adminNavLabel").innerHTML = `⚙️ <span>${isAdmin() ? "Administration" : "Modération"}</span>`;
-
-  $("sidebarFolders").innerHTML = folders.map(f => {
-    const count = docs.filter(d => d.folder_id === f.id).length;
-    const isAct = activeView === "library" && selectedFolder === f.id;
-    const tagHtml = f.tag ? `<span class="folder-tag-badge">${safe(f.tag)}</span>` : "";
-    return `
-      <div class="side-item ${isAct ? "active" : ""}" data-folder="${f.id}">
-        <span class="side-left">📁 <span>${safe(f.name)}</span> ${tagHtml}</span>
-        <span class="count-pill">${count}</span>
-      </div>`;
-  }).join("");
-
-  $("destination").innerHTML = folders.map(f => `<option value="${f.id}">${safe(f.name)} ${f.tag ? `(${f.tag})` : ""}</option>`).join("");
-  if (selectedFolder && selectedFolder !== "ALL") $("destination").value = selectedFolder;
-
-  if (activeView === "favs") {
+  if (selectedFolder === "FAVS") {
+    const favs = getFavs();
+    list = list.filter(d => favs.includes(d.id));
     $("pageTitle").textContent = "⭐ Mes favoris";
-    $("pageSub").textContent = "Tes ressources épinglées pour un accès rapide";
-  } else if (selectedFolder === "ALL") {
-    $("pageTitle").textContent = "Tous les fichiers";
-    $("pageSub").textContent = canPublish() ? "Glisse un fichier n'importe où ici pour l'ajouter" : "Parcours l'ensemble des cours partagés";
+    $("pageSub").textContent = `${list.length} ressource(s) enregistrée(s)`;
+  } else if (selectedFolder !== "ALL") {
+    list = list.filter(d => d.folder_id === selectedFolder);
+    const f = folders.find(x => x.id === selectedFolder);
+    $("pageTitle").textContent = f ? `📁 ${f.name}` : "Dossier";
+    $("pageSub").textContent = f?.tag ? `Catégorie : ${f.tag}` : "";
   } else {
-    const activeFold = folders.find(f => f.id === selectedFolder);
-    $("pageTitle").textContent = "📁 " + (activeFold?.name || "Dossier") + (activeFold?.tag ? ` [${activeFold.tag}]` : "");
-    $("pageSub").textContent = canPublish() ? "Glisse un fichier ici pour le ranger dans ce dossier" : "Ressources disponibles dans ce dossier";
+    $("pageTitle").textContent = "Tous les fichiers";
+    $("pageSub").textContent = "Explore l'ensemble des ressources partagées par la communauté";
   }
 
-  const q = $("search").value.toLowerCase();
-  const onlyMine = $("onlyMine").checked;
+  const q = ($("search").value || "").toLowerCase().trim();
+  if (q) {
+    list = list.filter(d =>
+      (d.title || "").toLowerCase().includes(q) ||
+      (d.content || "").toLowerCase().includes(q) ||
+      (d.author_name || "").toLowerCase().includes(q) ||
+      (d.file_name || "").toLowerCase().includes(q)
+    );
+  }
+
+  if ($("onlyMine").checked && user) {
+    list = list.filter(d => d.author_id === user.id);
+  }
+
   const sort = $("sortOrder").value;
+  if (sort === "newest") list.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+  if (sort === "oldest") list.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+  if (sort === "alpha") list.sort((a,b) => (a.title || "").localeCompare(b.title || ""));
+  if (sort === "size") list.sort((a,b) => (b.bytes || 0) - (a.bytes || 0));
 
-  let filtered = docs.filter(d =>
-    (activeView === "favs" ? favs.includes(d.id) : (selectedFolder === "ALL" || d.folder_id === selectedFolder)) &&
-    (!onlyMine || (user && d.author_id === user.id)) &&
-    (d.title + " " + (d.content || "") + " " + (d.file_name || "") + " " + (d.author_name || "") + " " + (d.author_class || "")).toLowerCase().includes(q)
-  );
+  let html = "";
+  for (const d of list) {
+    const isFav = getFavs().includes(d.id);
+    const folderObj = folders.find(x => x.id === d.folder_id);
+    const hasText = !d.file_url && d.content;
 
-  if (sort === "oldest") {
-    filtered = [...filtered].reverse();
-  } else if (sort === "alpha") {
-    filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
-  } else if (sort === "size") {
-    filtered = [...filtered].sort((a, b) => (b.file_size_bytes || 0) - (a.file_size_bytes || 0));
-  }
-
-  $("documents").innerHTML = filtered.length ? filtered.map(d => {
-    const hasText = !!(d.content && d.content.trim());
-    const editable = canManageDoc(d);
-    const folderName = folders.find(f => f.id === d.folder_id)?.name || "";
-    const showImg = d.file_url && isImageFile(d.file_name);
-    const canPreview = d.file_url && (showImg || isPdfFile(d.file_name));
-    const isFav = favs.includes(d.id);
-    const thumbHTML = getFileThumbnail(d);
-    const classBadge = d.author_class ? `<span class="doc-class-pill">🎓 ${safe(d.author_class)}</span>` : "";
-
-    return `
+    html += `
       <div class="doc ${hasText ? "has-text" : ""}">
         <div>
           <div class="doc-top">
-            <div style="display:flex;gap:10px;align-items:flex-start;min-width:0">
-              ${thumbHTML}
-              <div style="min-width:0">
-                <div class="doc-title">${safe(d.title)}</div>
-                <div class="doc-meta">${safe(d.author_name || "Membre")} ${classBadge} • ${formatDate(d.created_at)}</div>
-                ${(selectedFolder === "ALL" || activeView === "favs") && folderName ? `<span class="doc-folder-badge">📁 ${safe(folderName)}</span>` : ""}
-              </div>
-            </div>
-            <button class="mini-btn ${isFav ? "fav-on" : ""}" data-fav="${d.id}" title="Favori" style="padding:3px 7px">${isFav ? "⭐" : "☆"}</button>
-          </div>
-
-          ${hasText ? `<div class="doc-content">${safe(d.content)}</div>` : ""}
-          ${showImg && !activeView ? `<img class="doc-preview-img" data-preview="${d.id}" src="${safe(d.file_url)}" alt="">` : ""}
-        </div>
-
-        <div class="doc-footer">
-          ${d.file_url ? `<a class="btn-download" href="${safe(d.file_url)}" target="_blank" rel="noopener">⬇️ Télécharger ${d.file_size ? `(${safe(d.file_size)})` : ""}</a>` : `<span style="font-size:11.5px;color:var(--muted)">Note textuelle</span>`}
-          ${canPreview ? `<button class="mini-btn" data-preview="${d.id}" title="Aperçu">👁️</button>` : ""}
-          ${d.file_url ? `<button class="mini-btn" data-copy="${safe(d.file_url)}" title="Copier le lien">🔗</button>` : ""}
-          ${editable ? `<button class="mini-btn" data-edit="${d.id}" title="Modifier">✏️</button>` : ""}
-          ${editable ? `<button class="mini-btn del" data-delete="${d.id}" title="Supprimer">🗑️</button>` : ""}
-        </div>
-      </div>`;
-  }).join("") : `<div class="panel-card" style="grid-column:1/-1;text-align:center;padding:36px;color:var(--muted)">Aucune ressource trouvée dans cette vue.</div>`;
-
-  if (user) {
-    const myDocs = docs.filter(d => d.author_id === user.id);
-    $("memberContent").innerHTML = `
-      <div class="stats-row">
-        <div class="stat-box"><strong>${myDocs.length}</strong><span>Mes publications</span></div>
-        <div class="stat-box"><strong>${favs.length}</strong><span>Mes favoris</span></div>
-        <div class="stat-box"><strong>${folders.length}</strong><span>Dossiers partagés</span></div>
-        <div class="stat-box"><strong>${docs.length}</strong><span>Total ressources</span></div>
-      </div>
-
-      <div class="panel-card">
-        <h3>🪪 Mon profil et ma classe</h3>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div>
-            <label><small>Prénom</small></label>
-            <input id="myFirstname" value="${safe(profile?.firstname || "")}">
-          </div>
-          <div>
-            <label><small>Nom</small></label>
-            <input id="myLastname" value="${safe(profile?.lastname || "")}">
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div>
-            <label><small>Pseudo (affiché)</small></label>
-            <input id="myPseudo" value="${safe(profile?.pseudo || "")}">
-          </div>
-          <div>
-            <label><small>Classe</small></label>
-            <input id="myClass" value="${safe(profile?.class_name || "")}" placeholder="Ex: Terminale S">
-          </div>
-        </div>
-        <button id="saveMyProfile" class="primary-btn">💾 Enregistrer mes modifications</button>
-      </div>
-
-      <div class="panel-card">
-        <h3>📂 Mes ressources publiées (${myDocs.length})</h3>
-        ${myDocs.length ? myDocs.map(d => {
-          const folderName = folders.find(f => f.id === d.folder_id)?.name || "Dossier";
-          return `
-          <div class="list-row">
-            <div>
-              <strong>${safe(d.title)}</strong><br>
-              <small>📁 ${safe(folderName)} • ${formatDate(d.created_at)}</small>
-            </div>
-            <div style="display:flex;gap:5px">
-              <button class="mini-btn" data-edit="${d.id}">✏️</button>
-              <button class="mini-btn del" data-delete="${d.id}">🗑️</button>
-            </div>
-          </div>`;
-        }).join("") : "<p style='color:var(--muted)'>Tu n'as pas encore publié de ressource.</p>"}
-      </div>
-    `;
-  }
-
-  if (staff()) {
-    $("management").innerHTML = `
-      <div class="panel-card">
-        <h3>🛡️ Panneau de Modération Rapide (${docs.length} ressources en ligne)</h3>
-        <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px">En tant que modérateur/administrateur, tu peux nettoyer ou supprimer instantanément tout contenu inapproprié.</p>
-        <div style="max-height:300px;overflow-y:auto">
-          ${docs.map(d => {
-            const folderName = folders.find(f => f.id === d.folder_id)?.name || "Dossier";
-            return `
-            <div class="list-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              ${getFileThumbnail(d)}
               <div>
-                <strong>${safe(d.title)}</strong><br>
-                <small>Par <em>${safe(d.author_name || "Inconnu")}</em> (${safe(d.author_class || "Sans classe")}) dans 📁 <strong>${safe(folderName)}</strong></small>
+                <div class="doc-title">${safe(d.title)}</div>
+                <div class="doc-meta">Par ${safe(d.author_name || "Anonyme")} • ${formatDate(d.created_at)}</div>
               </div>
-              <button class="mini-btn del" data-delete="${d.id}">🗑️ Supprimer</button>
-            </div>`;
-          }).join("")}
-        </div>
-      </div>
-
-      <div class="panel-card">
-        <h3>📁 Gestion des dossiers & Catégories (${folders.length})</h3>
-        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <input id="newFolder" placeholder="Nom du nouveau dossier (ex: Mathématiques)" style="flex:2;margin:0">
-          <select id="newFolderTag" style="flex:1;margin:0">
-            <option value="Cours">📚 Cours</option>
-            <option value="Exercices">📝 Exercices</option>
-            <option value="Examens">🎯 Examens</option>
-            <option value="Projet">💡 Projet</option>
-          </select>
-          <button id="createFolder" class="primary-btn" style="white-space:nowrap">+ Créer</button>
-        </div>
-        ${folders.map(f => {
-          const count = docs.filter(d => d.folder_id === f.id).length;
-          return `
-          <div class="list-row">
-            <span>📁 <strong>${safe(f.name)}</strong> ${f.tag ? `<span class="folder-tag-badge">${safe(f.tag)}</span>` : ""} <small>(${count})</small></span>
-            <div style="display:flex;gap:5px">
-              <button class="mini-btn" data-rename-folder="${f.id}">✏️ Modifier</button>
-              <button class="mini-btn del" data-remove-folder="${f.id}">🗑️</button>
             </div>
-          </div>`;
-        }).join("")}
-      </div>
-
-      ${isAdmin() ? `
-      <div class="panel-card">
-        <h3>🎨 Identité de la plateforme</h3>
-        <label><small>Nom du site</small></label>
-        <input id="cfgTitle" value="${safe(settings.site_title)}">
-        <label><small>Slogan</small></label>
-        <input id="cfgSubtitle" value="${safe(settings.site_subtitle)}">
-        <button id="saveSettings" class="primary-btn">💾 Enregistrer</button>
-      </div>
-
-      <div class="panel-card">
-        <h3>👥 Membres & Rôles (${allProfiles.length})</h3>
-        ${allProfiles.map(p => `
-          <div class="list-row">
-            <span>👤 <strong>${safe(p.pseudo || p.firstname || "Sans nom")}</strong> (${safe(p.class_name || "Sans classe")}) ${p.id === user.id ? "<small>(Toi)</small>" : ""}</span>
-            <select data-role-user="${p.id}" ${p.id === user.id ? "disabled" : ""}>
-              <option value="member" ${p.role === "member" ? "selected" : ""}>Membre</option>
-              <option value="moderator" ${p.role === "moderator" ? "selected" : ""}>Modérateur</option>
-              <option value="admin" ${p.role === "admin" ? "selected" : ""}>Administrateur</option>
-            </select>
+            <div style="display:flex;gap:4px">
+              <button class="mini-btn ${isFav ? "fav-on" : ""}" data-action="fav" data-id="${d.id}" title="Favori">⭐</button>
+              ${canManageDoc(d) ? `<button class="mini-btn del" data-action="del" data-id="${d.id}" title="Supprimer">🗑️</button>` : ""}
+            </div>
           </div>
-        `).join("")}
-      </div>
-      ` : ""}
-
-      <div class="panel-card">
-        <h3>📦 Sauvegarde des données</h3>
-        <button id="exportData" class="sec-btn">⬇️ Exporter la base en JSON</button>
+          ${folderObj ? `<div class="doc-folder-badge">📁 ${safe(folderObj.name)}</div>` : ""}
+          ${d.file_url && isImageFile(d.file_name) ? `<img class="doc-preview-img" src="${safe(d.file_url)}" data-preview-click="${d.id}">` : ""}
+          ${d.content ? `<div class="doc-content">${safe(d.content)}</div>` : ""}
+        </div>
+        <div class="doc-footer">
+          ${d.file_url ? `<a class="btn-download" href="${safe(d.file_url)}" target="_blank" download>Télécharger (${safe(d.file_size || "Fichier")})</a>` : `<span></span>`}
+        </div>
       </div>
     `;
   }
 
-  bindActions();
-}
+  $("documents").innerHTML = html || `<p style="color:var(--muted);grid-column:1/-1;text-align:center;padding:40px">Aucune ressource trouvée.</p>`;
 
-function bindActions() {
-  document.querySelectorAll("[data-folder]").forEach(el => {
-    const folderId = el.dataset.folder;
-    el.onclick = () => {
-      selectedFolder = folderId;
-      switchView("library");
-    };
-    if (folderId !== "ALL") {
-      el.ondragover = e => { e.preventDefault(); e.stopPropagation(); if (canPublish()) el.classList.add("dragover"); };
-      el.ondragleave = () => el.classList.remove("dragover");
-      el.ondrop = e => {
-        e.preventDefault();
-        e.stopPropagation();
-        el.classList.remove("dragover");
-        handleDirectDrop(e.dataTransfer.files, folderId);
-      };
-    }
+  document.querySelectorAll("[data-action='fav']").forEach(btn => {
+    btn.onclick = () => toggleFav(btn.dataset.id);
   });
-
-  document.querySelectorAll("[data-view]").forEach(el => {
-    el.onclick = () => switchView(el.dataset.view);
-  });
-
-  document.querySelectorAll("[data-back]").forEach(el => {
-    el.onclick = () => switchView("library");
-  });
-
-  document.querySelectorAll("[data-fav]").forEach(el => { el.onclick = () => toggleFav(el.dataset.fav); });
-  document.querySelectorAll("[data-preview]").forEach(el => {
-    el.onclick = () => {
-      const d = docs.find(x => x.id === el.dataset.preview);
-      if (d) openPreview(d.title, d.file_url, d.file_name);
+  document.querySelectorAll("[data-action='del']").forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm("Supprimer cette ressource ?")) return;
+      const { error } = await db.from("documents").delete().eq("id", btn.dataset.id);
+      if (error) say("Erreur : " + error.message);
+      else { say("Ressource supprimée"); await loadData(); }
     };
   });
-  document.querySelectorAll("[data-copy]").forEach(el => {
-    el.onclick = async () => { await navigator.clipboard.writeText(el.dataset.copy); say("🔗 Lien copié"); };
+  document.querySelectorAll("[data-preview-click]").forEach(img => {
+    const docId = img.dataset.previewClick;
+    const doc = docs.find(x => x.id === docId);
+    if (doc) img.onclick = () => openPreview(doc.title, doc.file_url, doc.file_name);
   });
-  document.querySelectorAll("[data-delete]").forEach(el => { el.onclick = () => deleteDoc(el.dataset.delete); });
-  document.querySelectorAll("[data-edit]").forEach(el => { el.onclick = () => editDoc(el.dataset.edit); });
-  document.querySelectorAll("[data-remove-folder]").forEach(el => { el.onclick = () => deleteFolder(el.dataset.removeFolder); });
-  document.querySelectorAll("[data-rename-folder]").forEach(el => { el.onclick = () => renameFolder(el.dataset.renameFolder); });
-  document.querySelectorAll("[data-role-user]").forEach(el => { el.onchange = () => changeUserRole(el.dataset.roleUser, el.value); });
-
-  const saveProfileBtn = $("saveMyProfile");
-  if (saveProfileBtn) saveProfileBtn.onclick = updateProfile;
-
-  const create = $("createFolder");
-  if (create) create.onclick = addFolder;
-
-  const saveCfg = $("saveSettings");
-  if (saveCfg) saveCfg.onclick = saveInterfaceSettings;
-
-  const exp = $("exportData");
-  if (exp) exp.onclick = exportBackup;
 }
 
-$("sideNewBtn").onclick = () => {
-  if (!canPublish()) {
-    $("authModal").classList.remove("hidden");
-    return say("⚠️ Connecte-toi pour publier");
-  }
-  switchView("add");
+$("search").oninput = () => render();
+$("sortOrder").onchange = () => render();
+$("onlyMine").onchange = () => render();
+
+$("quickUploadBtn").onclick = () => $("quickFileInput").click();
+$("quickFileInput").onchange = async e => {
+  await handleDirectDrop(e.target.files, selectedFolder);
+  e.target.value = "";
 };
 
-$("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
-$("authModal").onclick = e => { if (e.target === $("authModal")) $("authModal").classList.add("hidden"); };
-
-async function updateProfile() {
-  const firstname = $("myFirstname").value.trim();
-  const lastname = $("myLastname").value.trim();
-  const pseudo = $("myPseudo").value.trim();
-  const class_name = $("myClass").value.trim();
-
-  const { error } = await db.from("profiles").update({ firstname, lastname, pseudo, class_name }).eq("id", user.id);
-  if (error) return say("❌ " + error.message);
-  say("✅ Profil et classe mis à jour");
-  await refreshUser();
-}
-
-async function saveInterfaceSettings() {
-  if (!isAdmin()) return;
-  const site_title = $("cfgTitle").value.trim() || "ClassShare";
-  const site_subtitle = $("cfgSubtitle").value.trim() || "Espace collaboratif";
-  const { error } = await db.from("settings").upsert({ id: 1, site_title, site_subtitle, theme_color: settings.theme_color });
-  if (error) return say("❌ " + error.message);
-  settings = { ...settings, site_title, site_subtitle };
-  applySiteIdentity();
-  say("✅ Identité mise à jour");
-}
-
-async function changeUserRole(targetId, newRole) {
-  if (!isAdmin()) return;
-  const { error } = await db.from("profiles").update({ role: newRole }).eq("id", targetId);
-  if (error) { say("❌ " + error.message); return await load(); }
-  say("✅ Rôle mis à jour");
-  await load();
-}
-
-function exportBackup() {
-  const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), settings, folders, documents: docs }, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `classshare-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  say("📦 Sauvegarde téléchargée");
-}
-
-const dz = $("dropZone");
-const fi = $("fileInput");
-dz.onclick = () => fi.click();
-fi.onchange = () => {
-  pendingFile = fi.files[0] || null;
-  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name} (${formatBytes(pendingFile.size)})` : "";
-};
-dz.ondragover = e => { e.preventDefault(); e.stopPropagation(); dz.classList.add("dragover"); };
-dz.ondragleave = () => dz.classList.remove("dragover");
-dz.ondrop = e => {
+const dropArea = $("dropArea");
+dropArea.ondragover = e => { e.preventDefault(); dropArea.classList.add("dragover-area"); };
+dropArea.ondragleave = () => dropArea.classList.remove("dragover-area");
+dropArea.ondrop = async e => {
   e.preventDefault();
-  e.stopPropagation();
-  dz.classList.remove("dragover");
-  pendingFile = e.dataTransfer.files[0] || null;
-  $("selectedFileName").textContent = pendingFile ? `Fichier prêt : ${pendingFile.name} (${formatBytes(pendingFile.size)})` : "";
+  dropArea.classList.remove("dragover-area");
+  if (e.dataTransfer?.files?.length) {
+    await handleDirectDrop(e.dataTransfer.files, selectedFolder);
+  }
 };
 
-async function addFolder() {
-  if (!staff()) return;
-  const name = $("newFolder").value.trim();
-  const tag = $("newFolderTag").value;
-  if (!name) return say("⚠️ Entre un nom de dossier");
-  const { error } = await db.from("folders").insert({ name, tag });
-  if (error) return say("❌ " + error.message);
-  $("newFolder").value = "";
-  say("✅ Dossier créé avec succès");
-  await load();
-}
+let selectedFile = null;
+const dropZone = $("dropZone");
+dropZone.onclick = () => $("fileInput").click();
+$("fileInput").onchange = e => {
+  selectedFile = e.target.files[0];
+  $("selectedFileName").textContent = selectedFile ? `Fichier sélectionné : ${selectedFile.name}` : "";
+};
 
-async function renameFolder(id) {
-  if (!staff()) return;
-  const current = folders.find(f => f.id === id);
-  if (!current) return;
-  const name = prompt("Nouveau nom du dossier :", current.name);
-  if (name === null) return;
-  const tag = prompt("Catégorie du dossier (ex: Cours, Exercices, Examens, Projet) :", current.tag || "Cours");
-  if (tag === null) return;
-
-  const { error } = await db.from("folders").update({ name: name.trim() || current.name, tag: tag.trim() }).eq("id", id);
-  if (error) return say("❌ " + error.message);
-  say("✅ Dossier mis à jour");
-  await load();
-}
-
-async function deleteFolder(id) {
-  if (!staff() || !confirm("Supprimer ce dossier et tout son contenu ?")) return;
-  const { error } = await db.from("folders").delete().eq("id", id);
-  if (error) return say("❌ " + error.message);
-  say("🗑️ Dossier supprimé");
-  await load();
-}
-
-async function addDoc() {
-  if (!canPublish()) return say("⚠️ Connexion nécessaire");
-  let title = $("title").value.trim();
-  const content = $("content").value.trim();
+$("publish").onclick = async () => {
+  if (!user) return say("⚠️ Connecte-toi pour publier");
+  const title = $("title").value.trim();
   const folder_id = $("destination").value;
+  const content = $("content").value.trim();
 
-  if (!folder_id) return say("⚠️ Choisis un dossier");
-  if (!title && !content && !pendingFile) return say("⚠️ Ajoute un titre, un texte ou un fichier");
+  if (!title) return say("⚠️ Le titre est obligatoire");
+  if (!folder_id) return say("⚠️ Sélectionne un dossier de destination");
 
-  $("publish").disabled = true;
   $("uploadStatusText").textContent = "Publication en cours...";
   $("uploadProgress").classList.remove("hidden");
 
   try {
-    let file_url = null, file_name = null, file_size = null, file_size_bytes = 0;
-    if (pendingFile) {
-      const uploaded = await uploadFile(pendingFile);
-      file_url = uploaded.url;
-      file_name = uploaded.name;
-      file_size = uploaded.size;
-      file_size_bytes = uploaded.bytes;
-      if (!title) title = pendingFile.name;
+    let fileData = {};
+    if (selectedFile) {
+      fileData = await uploadFile(selectedFile);
     }
 
     const { error } = await db.from("documents").insert({
-      title: title || "Sans titre",
-      content,
+      title,
       folder_id,
-      file_url,
-      file_name,
-      file_size,
-      file_size_bytes,
+      content,
+      file_url: fileData.url || null,
+      file_name: fileData.name || null,
+      file_size: fileData.size || null,
+      bytes: fileData.bytes || 0,
       author_id: user.id,
-      author_name: profile?.pseudo || profile?.firstname || "Membre",
-      author_class: profile?.class_name || ""
+      author_name: profile?.pseudo || profile?.firstname || user.email
     });
+
     if (error) throw error;
 
+    say("✅ Ressource publiée avec succès !");
     $("title").value = "";
     $("content").value = "";
-    pendingFile = null;
-    fi.value = "";
+    selectedFile = null;
     $("selectedFileName").textContent = "";
-    selectedFolder = folder_id;
-    say("✅ Ressource publiée");
-    await load();
+    $("fileInput").value = "";
     switchView("library");
+    await loadData();
   } catch (err) {
-    say("❌ " + err.message);
+    say("Erreur : " + err.message);
   } finally {
-    $("publish").disabled = false;
     $("uploadProgress").classList.add("hidden");
   }
+};
+
+function renderMemberView() {
+  $("memberContent").innerHTML = `
+    <div class="panel-card" style="max-width:600px">
+      <h3>Informations de ton compte</h3>
+      <label><small>Prénom</small></label>
+      <input id="myFirstname" value="${safe(profile?.firstname || "")}">
+      <label><small>Nom</small></label>
+      <input id="myLastname" value="${safe(profile?.lastname || "")}">
+      <label><small>Pseudo (public)</small></label>
+      <input id="myPseudo" value="${safe(profile?.pseudo || "")}">
+      <label><small>Classe</small></label>
+      <input id="myClass" value="${safe(profile?.class_name || "")}">
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button id="saveProfileBtn" class="primary-btn">Enregistrer les modifications</button>
+        <button id="logoutBtn" class="danger-btn">Se déconnecter</button>
+      </div>
+    </div>
+  `;
+
+  $("saveProfileBtn").onclick = async () => {
+    const updates = {
+      firstname: $("myFirstname").value.trim(),
+      lastname: $("myLastname").value.trim(),
+      pseudo: $("myPseudo").value.trim(),
+      class_name: $("myClass").value.trim()
+    };
+    const { error } = await db.from("profiles").update(updates).eq("id", user.id);
+    if (error) say("Erreur : " + error.message);
+    else {
+      say("✅ Profil mis à jour avec succès !");
+      await refreshUser();
+      switchView("library");
+    }
+  };
+
+  $("logoutBtn").onclick = async () => {
+    await db.auth.signOut();
+    say("Déconnecté");
+    await refreshUser();
+    switchView("library");
+  };
 }
 
-async function deleteDoc(id) {
-  const doc = docs.find(x => x.id === id);
-  if (!doc || (!staff() && doc.author_id !== user?.id) || !confirm("Supprimer cette ressource ?")) return;
-  const { error } = await db.from("documents").delete().eq("id", id);
-  if (error) return say("❌ " + error.message);
-  say("🗑️ Ressource supprimée");
-  await load();
-}
+function renderAdminView() {
+  if (!staff()) return switchView("library");
 
-async function editDoc(id) {
-  const d = docs.find(x => x.id === id);
-  if (!d || !canManageDoc(d)) return;
-  const title = prompt("Nouveau titre :", d.title);
-  if (title === null) return;
-  const content = prompt("Nouveau contenu :", d.content || "");
-  if (content === null) return;
-  const { error } = await db.from("documents").update({ title: title.trim() || d.title, content }).eq("id", id);
-  if (error) return say("❌ " + error.message);
-  say("✅ Ressource modifiée");
-  await load();
-}
+  $("management").innerHTML = `
+    <div class="stats-row">
+      <div class="stat-box"><strong>${docs.length}</strong><span>Ressources</span></div>
+      <div class="stat-box"><strong>${folders.length}</strong><span>Dossiers</span></div>
+      <div class="stat-box"><strong>${allProfiles.length}</strong><span>Membres</span></div>
+    </div>
 
-async function signup() {
-  const email = $("modalEmail").value.trim();
-  const password = $("modalPassword").value;
-  const firstname = $("modalFirstname").value.trim();
-  const lastname = $("modalLastname").value.trim();
-  const pseudo = $("modalPseudo").value.trim() || firstname || "Membre";
-  const class_name = $("modalClass").value.trim();
+    <div class="panel-card">
+      <h3>Créer un nouveau dossier</h3>
+      <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:8px">
+        <input id="newFolderName" placeholder="Nom du dossier (ex: Mathématiques)">
+        <select id="newFolderTag">
+          <option value="Cours">Cours</option>
+          <option value="Exercices">Exercices</option>
+          <option value="Examens">Examens</option>
+          <option value="Projets">Projets</option>
+          <option value="Autre">Autre</option>
+        </select>
+        <button id="createFolderBtn" class="primary-btn">Créer</button>
+      </div>
+    </div>
 
-  if (!email || password.length < 8) return say("⚠️ E-mail valide et mot de passe de 8 caractères min.");
-  const { data, error } = await db.auth.signUp({
-    email,
-    password,
-    options: { data: { firstname, lastname, pseudo, class_name, display_name: pseudo } }
+    <div class="panel-card">
+      <h3>Gestion des dossiers</h3>
+      <div id="adminFolderList"></div>
+    </div>
+
+    <div class="panel-card">
+      <h3>Gestion des membres & rôles</h3>
+      <div id="adminUserList"></div>
+    </div>
+
+    <div class="panel-card">
+      <h3>Paramètres généraux du site</h3>
+      <label><small>Nom du site</small></label>
+      <input id="cfgTitle" value="${safe(settings.site_title || "")}">
+      <label><small>Sous-titre</small></label>
+      <input id="cfgSubtitle" value="${safe(settings.site_subtitle || "")}">
+      <button id="saveSettingsBtn" class="primary-btn" style="margin-top:10px">Enregistrer les paramètres</button>
+    </div>
+  `;
+
+  $("createFolderBtn").onclick = async () => {
+    const name = $("newFolderName").value.trim();
+    const tag = $("newFolderTag").value;
+    if (!name) return say("⚠️ Nom du dossier requis");
+    const { error } = await db.from("folders").insert({ name, tag });
+    if (error) say("Erreur : " + error.message);
+    else {
+      say("✅ Dossier créé !");
+      $("newFolderName").value = "";
+      await loadData();
+    }
+  };
+
+  let fHtml = "";
+  for (const f of folders) {
+    fHtml += `
+      <div class="list-row">
+        <span>📁 <strong>${safe(f.name)}</strong> <small class="folder-tag-badge">${safe(f.tag || "")}</small></span>
+        <button class="mini-btn del" data-delfolder="${f.id}">Supprimer</button>
+      </div>
+    `;
+  }
+  $("adminFolderList").innerHTML = fHtml || "<p>Aucun dossier.</p>";
+
+  document.querySelectorAll("[data-delfolder]").forEach(btn => {
+    btn.onclick = async () => {
+      if (!confirm("Supprimer ce dossier et son contenu associé ?")) return;
+      const { error } = await db.from("folders").delete().eq("id", btn.dataset.delfolder);
+      if (error) say("Erreur : " + error.message);
+      else { say("Dossier supprimé"); await loadData(); }
+    };
   });
-  if (error) return say("❌ " + error.message);
-  if (!data.session) return say("📩 Vérifie ta boîte e-mail pour confirmer ton compte");
-  await refreshUser();
-  say("🎉 Bienvenue sur ClassShare !");
+
+  let uHtml = "";
+  for (const p of allProfiles) {
+    uHtml += `
+      <div class="list-row">
+        <span>👤 <strong>${safe(p.pseudo || p.firstname || p.id)}</strong> <small>${safe(p.class_name || "")}</small></span>
+        <select data-roleuid="${p.id}">
+          <option value="member" ${p.role === "member" ? "selected" : ""}>Membre</option>
+          <option value="moderator" ${p.role === "moderator" ? "selected" : ""}>Modérateur</option>
+          <option value="admin" ${p.role === "admin" ? "selected" : ""}>Administrateur</option>
+        </select>
+      </div>
+    `;
+  }
+  $("adminUserList").innerHTML = uHtml || "<p>Aucun membre.</p>";
+
+  document.querySelectorAll("[data-roleuid]").forEach(sel => {
+    sel.onchange = async () => {
+      const uid = sel.dataset.roleuid;
+      const role = sel.value;
+      const { error } = await db.from("profiles").update({ role }).eq("id", uid);
+      if (error) say("Erreur : " + error.message);
+      else say("✅ Rôle mis à jour");
+    };
+  });
+
+  $("saveSettingsBtn").onclick = async () => {
+    const site_title = $("cfgTitle").value.trim();
+    const site_subtitle = $("cfgSubtitle").value.trim();
+    const { error } = await db.from("settings").update({ site_title, site_subtitle }).eq("id", 1);
+    if (error) say("Erreur : " + error.message);
+    else {
+      say("✅ Paramètres enregistrés !");
+      await loadSettings();
+    }
+  };
 }
 
-async function login() {
+$("closeAuthModal").onclick = () => $("authModal").classList.add("hidden");
+
+$("modalLogin").onclick = async () => {
   const email = $("modalEmail").value.trim();
   const password = $("modalPassword").value;
+  if (!email || !password) return say("⚠️ Renseigne ton e-mail et ton mot de passe");
+
   const { error } = await db.auth.signInWithPassword({ email, password });
-  if (error) return say("❌ " + error.message);
+  if (error) {
+    say("Erreur de connexion : " + error.message);
+  } else {
+    say("✅ Connexion réussie !");
+    $("authModal").classList.add("hidden");
+    await refreshUser();
+    await loadData();
+  }
+};
+
+$("modalSignup").onclick = async () => {
+  const email = $("modalEmail").value.trim();
+  const password = $("modalPassword").value;
+  if (!email || !password) return say("⚠️ Renseigne ton e-mail et ton mot de passe");
+
+  const { data, error } = await db.auth.signUp({ email, password });
+  if (error) {
+    say("Erreur d'inscription : " + error.message);
+    return;
+  }
+
+  if (data?.user) {
+    const { error: pErr } = await db.from("profiles").insert({
+      id: data.user.id,
+      firstname: $("modalFirstname").value.trim(),
+      lastname: $("modalLastname").value.trim(),
+      pseudo: $("modalPseudo").value.trim() || email.split("@")[0],
+      class_name: $("modalClass").value.trim(),
+      role: "member"
+    });
+
+    if (pErr) {
+      say("Erreur profil : " + pErr.message);
+    } else {
+      say("✅ Compte créé avec succès !");
+      $("authModal").classList.add("hidden");
+      await refreshUser();
+      await loadData();
+    }
+  }
+};
+
+async function init() {
+  await loadSettings();
   await refreshUser();
-  say("✅ Connexion réussie");
+  await loadData();
 }
 
-async function logout() {
-  await db.auth.signOut();
-  await refreshUser();
-  switchView("library");
-  say("👋 Déconnexion réussie");
-}
-
-$("modalSignup").onclick = signup;
-$("modalLogin").onclick = login;
-$("publish").onclick = addDoc;
-$("search").oninput = render;
-$("sortOrder").onchange = render;
-$("onlyMine").onchange = render;
-
-db.auth.onAuthStateChange(() => setTimeout(() => refreshUser(), 0));
-
-await refreshUser();
+init();
 </script>
 </body>
 </html>
