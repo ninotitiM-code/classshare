@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ClassShare</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -266,14 +267,12 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
 .list-row:last-child{border-bottom:none}
 .list-row select{width:auto;margin:0;padding:5px 9px}
 
-/* DROPDOWN NOTIFICATIONS */
 .notif-wrapper{position:relative}
 .notif-dropdown{position:absolute;right:0;top:40px;width:320px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-hover);display:none;z-index:1000;padding:12px;max-height:380px;overflow-y:auto}
 .notif-dropdown.show{display:block}
 .notif-item{padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text)}
 .notif-item:last-child{border-bottom:none}
 
-/* STYLES CHAT ET MP */
 .chat-layout{display:flex;height:calc(100vh - 70px);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
 .chat-sidebar{width:220px;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:12px;flex-shrink:0}
 .chat-main{flex:1;display:flex;flex-direction:column;background:var(--card);min-width:0}
@@ -373,7 +372,6 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
     </div>
 
     <div class="topbar-right">
-      <!-- Cloche de Notifications -->
       <div class="notif-wrapper">
         <button id="notifBtn" class="icon-pill" title="Notifications">🔔 <span id="notifBadge" class="hidden" style="background:#dc2626;color:white;padding:1px 5px;border-radius:99px;font-size:10px">0</span></button>
         <div id="notifDropdown" class="notif-dropdown">
@@ -478,7 +476,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
       <div id="memberContent"></div>
     </div>
 
-    <!-- VUE 4 : CHAT EN DIRECT & MESSAGERIE PRIVÉE -->
+    <!-- VUE 4 : CHAT EN DIRECT -->
     <div id="viewChat" class="hidden" style="flex:1;display:flex;flex-direction:column">
       <div class="page-header" style="margin-bottom:12px">
         <div>
@@ -492,7 +490,6 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
         </div>
       </div>
 
-      <!-- Vue Chat Général -->
       <div id="publicChatSection" class="chat-layout">
         <div class="chat-sidebar">
           <div class="nav-label">Salon</div>
@@ -511,7 +508,6 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
         </div>
       </div>
 
-      <!-- Vue Messages Privés -->
       <div id="privateChatSection" class="chat-layout hidden">
         <div class="chat-sidebar">
           <div class="nav-label">Discuter avec :</div>
@@ -651,7 +647,7 @@ button.danger-btn{background:#dc2626;color:white;border:0;padding:7px 12px;borde
   </div>
 </div>
 
-<!-- Modale d'aperçu (Images et PDF) -->
+<!-- Modale d'aperçu -->
 <div id="previewModal" class="modal-backdrop hidden">
   <div class="modal-window large">
     <div class="modal-head">
@@ -697,7 +693,7 @@ function say(msg) {
   el.textContent = msg;
   el.classList.remove("hidden");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.add("hidden"), 4000);
+  toastTimer = setTimeout(() => el.classList.add("hidden"), 4500);
 }
 
 $("mobileMenuBtn").onclick = () => {
@@ -766,11 +762,16 @@ async function toggleLike(docId) {
   }
   localStorage.setItem("cs_likes", JSON.stringify(likes));
 
+  if (String(docId).startsWith("default-")) {
+    doc.likes_count = newCount;
+    render();
+    return;
+  }
+
   await db.from("documents").update({ likes_count: newCount }).eq("id", docId);
   await loadData();
 }
 
-/* SYSTÈME DE NOTIFICATIONS LOCALES */
 function getLocalNotifs() {
   try { return JSON.parse(localStorage.getItem("cs_notifs") || "[]"); }
   catch { return []; }
@@ -784,7 +785,6 @@ function addLocalNotif(text) {
 }
 function renderNotifs() {
   const notifs = getLocalNotifs();
-  $("notifBadge.hidden")?.classList.remove("hidden");
   const badge = $("notifBadge");
   if (notifs.length > 0) {
     badge.textContent = notifs.length;
@@ -900,9 +900,6 @@ function getFileThumbnail(doc) {
   if (/\.pdf$/.test(n)) {
     return `<div class="file-thumb thumb-pdf" data-preview="${doc.id}" title="Voir le PDF"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>`;
   }
-  if (/\.(xls|xlsx|csv)$/.test(n)) {
-    return `<div class="file-thumb thumb-xls"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>`;
-  }
   return `<div class="file-thumb thumb-doc"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>`;
 }
 
@@ -944,9 +941,43 @@ async function uploadFile(file) {
   const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = `${profile.id}/${Date.now()}_${cleanName}`;
   const { error } = await db.storage.from(BUCKET).upload(path, file);
-  if (error) throw error;
+  if (error) throw new Error(`Échec upload Storage : ${error.message}`);
   const { data } = db.storage.from(BUCKET).getPublicUrl(path);
   return { url: data.publicUrl, name: file.name, size: formatBytes(file.size), bytes: file.size };
+}
+
+async function insertDocumentRecord({ title, content, folderId, uploaded }) {
+  const realFolders = folders.filter(f => !String(f.id).startsWith("default-"));
+  const chosenFolder = folders.find(f => f.id === folderId && !String(f.id).startsWith("default-"));
+  const finalFolderId = chosenFolder ? chosenFolder.id : (realFolders[0]?.id || null);
+
+  if (!finalFolderId) {
+    throw new Error("Aucun dossier Supabase trouvé. Crée un dossier dans le panel Admin avant d'ajouter un fichier.");
+  }
+
+  const payload = {
+    title,
+    content: content || "",
+    folder_id: finalFolderId,
+    file_url: uploaded?.url || null,
+    file_name: uploaded?.name || null,
+    file_size: uploaded?.size || null,
+    bytes: uploaded?.bytes || 0,
+    author_id: profile.id,
+    author_name: profile.pseudo || profile.firstname,
+    likes_count: 0
+  };
+
+  const { data, error } = await db
+    .from("documents")
+    .insert(payload)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Échec enregistrement (${error.code || "RLS/Colonne"}) : ${error.message}`);
+  }
+  return data;
 }
 
 async function handleDirectDrop(files, folderId) {
@@ -962,31 +993,28 @@ async function handleDirectDrop(files, folderId) {
   $("uploadStatusText").textContent = `Envoi de ${files.length} fichier(s) vers "${folderName}"...`;
   $("uploadProgress").classList.remove("hidden");
 
+  let successCount = 0;
   for (const file of files) {
     try {
       const uploaded = await uploadFile(file);
-      const { error } = await db.from("documents").insert({
+      await insertDocumentRecord({
         title: file.name,
         content: "",
-        folder_id: targetFolder,
-        file_url: uploaded.url,
-        file_name: uploaded.name,
-        file_size: uploaded.size,
-        bytes: uploaded.bytes,
-        author_id: profile.id,
-        author_name: profile.pseudo || profile.firstname,
-        likes_count: 0
+        folderId: targetFolder,
+        uploaded
       });
-      if (error) throw error;
       addLocalNotif(`Nouveau fichier : ${file.name}`);
+      successCount++;
     } catch (err) {
-      say("Erreur : " + err.message);
+      say("❌ " + err.message);
     }
   }
 
   $("uploadProgress").classList.add("hidden");
-  say("✅ Fichier(s) déposé(s) avec succès !");
-  await loadData();
+  if (successCount > 0) {
+    say(`✅ ${successCount} fichier(s) enregistré(s) !`);
+    await loadData();
+  }
 }
 
 async function refreshUser() {
@@ -1048,6 +1076,46 @@ async function loadData() {
   allProfiles = pRes.data || [];
   chatMessages = chRes.data || [];
   privateMessages = pmRes.data || [];
+
+  if (folders.length === 0) {
+    folders = [
+      { id: "default-f1", name: "Supermot & Passion", tag: "Loisirs" },
+      { id: "default-f2", name: "CS2 - Tactiques & Callouts", tag: "Gaming" },
+      { id: "default-f3", name: "Cours & Révisions", tag: "Cours" }
+    ];
+  }
+
+  if (docs.length === 0) {
+    docs = [
+      {
+        id: "default-d1",
+        title: "Guide du Supermotard : Réglages suspensions & Drift",
+        content: "1. Pression des pneus sur asphalte : environ 1.8 bar à l'avant et 1.6 à l'arrière.\n2. Position du corps : bien avancer sur la selle pour engager l'avant dans les épingles.\n3. Technique du freinage tardif pour déclencher la glisse arrière en toute sécurité.",
+        folder_id: "default-f1",
+        author_name: "Drox",
+        created_at: new Date().toISOString(),
+        likes_count: 5
+      },
+      {
+        id: "default-d2",
+        title: "Stratégies CS2 - Mirage & Inferno smokes",
+        content: "- Mirage (A Site) : Smoke fenêtre, smoke connector et smoke short.\n- Inferno (Banana) : Contrôle de la banane avec molotov et double peek coordonné.",
+        folder_id: "default-f2",
+        author_name: "Staff",
+        created_at: new Date().toISOString(),
+        likes_count: 8
+      },
+      {
+        id: "default-d3",
+        title: "Fiche de révision - Mathématiques (Dérivées & Limites)",
+        content: "- Formule de dérivation usuelle : (x^n)' = n*x^(n-1)\n- Étude de signe de la dérivée pour connaître les variations.",
+        folder_id: "default-f3",
+        author_name: "Professeur",
+        created_at: new Date().toISOString(),
+        likes_count: 3
+      }
+    ];
+  }
 
   renderSidebarFolders();
   renderDestinationOptions();
@@ -1222,6 +1290,12 @@ function render() {
   document.querySelectorAll("[data-action='del']").forEach(btn => {
     btn.onclick = async () => {
       if (!confirm("Supprimer cette ressource ?")) return;
+      if (String(btn.dataset.id).startsWith("default-")) {
+        docs = docs.filter(x => x.id !== btn.dataset.id);
+        say("Ressource supprimée");
+        render();
+        return;
+      }
       const { error } = await db.from("documents").delete().eq("id", btn.dataset.id);
       if (error) say("Erreur : " + error.message);
       else { say("Ressource supprimée"); await loadData(); }
@@ -1277,25 +1351,17 @@ $("publish").onclick = async () => {
   $("uploadProgress").classList.remove("hidden");
 
   try {
-    let fileData = {};
+    let uploaded = null;
     if (selectedFile) {
-      fileData = await uploadFile(selectedFile);
+      uploaded = await uploadFile(selectedFile);
     }
 
-    const { error } = await db.from("documents").insert({
+    await insertDocumentRecord({
       title,
-      folder_id,
       content,
-      file_url: fileData.url || null,
-      file_name: fileData.name || null,
-      file_size: fileData.size || null,
-      bytes: fileData.bytes || 0,
-      author_id: profile.id,
-      author_name: profile.pseudo || profile.firstname,
-      likes_count: 0
+      folderId: folder_id,
+      uploaded
     });
-
-    if (error) throw error;
 
     addLocalNotif(`Nouvelle ressource : ${title}`);
     say("✅ Ressource publiée avec succès !");
@@ -1307,7 +1373,7 @@ $("publish").onclick = async () => {
     switchView("library");
     await loadData();
   } catch (err) {
-    say("Erreur : " + err.message);
+    say("❌ " + err.message);
   } finally {
     $("uploadProgress").classList.add("hidden");
   }
@@ -1370,7 +1436,6 @@ function renderMemberView() {
   };
 }
 
-/* BASCULE ENTRE CHAT PUBLIC ET MESSAGES PRIVÉS */
 $("switchPublicChat").onclick = () => {
   activeChatSubView = "public";
   $("switchPublicChat").classList.add("active");
@@ -1393,7 +1458,6 @@ $("switchPrivateChat").onclick = () => {
   renderPrivateChatList();
 };
 
-/* GESTION DU CHAT GÉNÉRAL */
 function renderChat() {
   if (!profile) return switchView("library");
 
@@ -1458,8 +1522,6 @@ async function sendChatMessage() {
 $("chatSendBtn").onclick = sendChatMessage;
 $("chatInput").onkeydown = e => { if (e.key === "Enter") sendChatMessage(); };
 
-
-/* GESTION DES MESSAGES PRIVÉS (MP) */
 function renderPrivateChatList() {
   let listHtml = "";
   for (const p of allProfiles) {
@@ -1549,8 +1611,6 @@ async function sendPrivateMessage() {
 $("pmSendBtn").onclick = sendPrivateMessage;
 $("pmInput").onkeydown = e => { if (e.key === "Enter") sendPrivateMessage(); };
 
-
-/* TEMPS RÉEL SUPABASE */
 db.channel('realtime-all-messages')
   .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'discord_messages' }, payload => {
     if (!chatMessages.some(m => m.id === payload.new.id)) {
@@ -1647,6 +1707,12 @@ function renderAdminView() {
   document.querySelectorAll("[data-delfolder]").forEach(btn => {
     btn.onclick = async () => {
       if (!confirm("Supprimer ce dossier et son contenu associé ?")) return;
+      if (String(btn.dataset.delfolder).startsWith("default-")) {
+        folders = folders.filter(x => x.id !== btn.dataset.delfolder);
+        say("Dossier supprimé");
+        renderAdminView();
+        return;
+      }
       const { error } = await db.from("folders").delete().eq("id", btn.dataset.delfolder);
       if (error) say("Erreur : " + error.message);
       else { say("Dossier supprimé"); await loadData(); renderAdminView(); }
